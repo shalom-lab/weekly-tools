@@ -1,6 +1,10 @@
-const puppeteer = require('puppeteer');
-const fs = require('fs').promises;
-const path = require('path');
+import puppeteer from 'puppeteer';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const OUTPUT_FILE = 'weekly_issues.json';
 
