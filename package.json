@@ -1,0 +1,22 @@
+{
+  "name": "weekly",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "fetch": "node crawler.js",
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "vue": "^3.4.21",
+    "puppeteer": "^24.4.0",
+    "vite": "^6.2.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4"
+  }
+}

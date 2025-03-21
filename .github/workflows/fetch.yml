@@ -1,0 +1,39 @@
+name: Fetch Daily Updates
+
+on:
+  schedule:
+    - cron: '0 18 * * *'  # UTC 18:00 (北京时间凌晨2:00)
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install Dependencies
+        run: npm install
+        
+      - name: Fetch Latest Data
+        run: npm run fetch
+        
+      - name: Check for Changes
+        id: verify_diff
+        run: |
+          git diff --quiet weekly_issues.json || echo "changed=true" >> $GITHUB_OUTPUT
+          
+      - name: Commit and Push
+        if: steps.verify_diff.outputs.changed == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add weekly_issues.json
+          git commit -m "Auto fetch: $(date +'%Y-%m-%d')"
+          git push 
