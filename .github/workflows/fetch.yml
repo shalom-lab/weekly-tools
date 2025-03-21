@@ -21,8 +21,30 @@ jobs:
       - name: Install Dependencies
         run: npm install
         
-      - name: Fetch Latest Data
-        run: npm run fetch
+      - name: Install Chrome dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgbm-dev \
+            libxkbcommon-x11-0 \
+            libgtk-3-0 \
+            libnss3 \
+            libxss1 \
+            libasound2t64 \
+            fonts-noto-cjk
+          
+      - name: Install dependencies
+        run: |
+          npm install
+          # 确保安装最新版本的 puppeteer
+          npm install puppeteer@latest
+          
+      - name: Run scraper
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+        run: |
+          npm run fetch
+          
         
       - name: Check for Changes
         id: verify_diff
