@@ -390,7 +390,8 @@ body {
 }
 
 .detail-title h2 {
-    margin: 0;
+    margin-left: -10px;
+    margin-bottom: 5px;
     flex: 1;
 }
 
