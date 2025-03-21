@@ -42,11 +42,14 @@ jobs:
         run: |
           npm run fetch
           
-        
       - name: Check for Changes
         id: verify_diff
         run: |
-          git diff --quiet weekly_issues.json || echo "changed=true" >> $GITHUB_OUTPUT
+          if [ ! -f weekly_issues.json ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            git diff --quiet weekly_issues.json || echo "changed=true" >> $GITHUB_OUTPUT
+          fi
           
       - name: Commit and Push
         if: steps.verify_diff.outputs.changed == 'true'
