@@ -3,7 +3,9 @@
 [![Deploy to GitHub Pages](https://github.com/shalom-lab/weekly-tools/actions/workflows/deploy.yml/badge.svg)](https://github.com/shalom-lab/weekly-tools/actions/workflows/deploy.yml)
 [![Fetch Daily Updates](https://github.com/shalom-lab/weekly-tools/actions/workflows/fetch.yml/badge.svg)](https://github.com/shalom-lab/weekly-tools/actions/workflows/fetch.yml)
 
-🔗 在线访问：[https://shalom-lab.github.io/weekly-tools/](https://shalom-lab.github.io/weekly-tools/)
+🔗 在线访问：[https://shalom-lab.github.io/weekly-tools/](https://github.com/shalom-lab/weekly-tools/)
+
+> 💡 建议使用电脑端访问以获得最佳浏览体验
 
 ## 项目介绍
 
@@ -15,6 +17,8 @@
 - 🔍 支持标题和内容搜索
 - 📖 优雅的阅读体验
 - ⚡️ 基于 Vite 构建，快速加载
+- 💻 优化的桌面端双栏布局
+- 📱 基础的移动端适配
 
 ### 技术栈
 

@@ -201,11 +201,27 @@ const formatDate = (datetime) => {
         flex-direction: column;
         padding: 1rem;
         height: var(--nav-height-mobile);
+        gap: 1rem;
     }
 
     .container {
         height: 100%;
         overflow: hidden;
+    }
+
+    .title-section {
+        padding-left: 0;
+    }
+
+    .site-title {
+        font-size: 1.2rem;
+        text-align: center;
+    }
+
+    .repo-links {
+        font-size: 0.75rem;
+        justify-content: center;
+        flex-wrap: wrap;
     }
 
     .main-content {
@@ -219,7 +235,7 @@ const formatDate = (datetime) => {
 
     .issue-list {
         border-right: none;
-        max-height: 50vh;
+        max-height: 40vh;
         overflow: hidden;
     }
 
@@ -227,23 +243,44 @@ const formatDate = (datetime) => {
         border-bottom: 1px solid var(--border-color);
     }
 
+    .issue-item {
+        padding: 12px;
+        height: 70px;
+    }
+
+    .issue-title {
+        font-size: 14px;
+        line-height: 20px;
+        margin-bottom: 8px;
+    }
+
+    .issue-meta {
+        font-size: 12px;
+        line-height: 18px;
+    }
+
     .issue-detail {
         padding: 0 1rem;
-        max-height: calc(50vh - 60px);
+        max-height: calc(60vh - 60px);
         overflow-y: auto;
     }
 
     .empty-state {
-        max-height: calc(50vh - 60px);
+        max-height: calc(60vh - 60px);
     }
 
     .detail-title h2 {
         font-size: 1.2rem;
+        margin-left: 0;
     }
 
-    .repo-links {
-        flex-wrap: wrap;
-        justify-content: center;
+    .pagination {
+        padding: 0.5rem;
+    }
+
+    .page-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
     }
 
     /* 移动端选中文章后自动滚动到详情区域 */
@@ -253,6 +290,16 @@ const formatDate = (datetime) => {
 
     .github-corner {
         display: none;
+    }
+
+    /* 优化搜索框 */
+    .search-bar {
+        width: 100%;
+    }
+
+    .search-input {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
     }
 }
 
