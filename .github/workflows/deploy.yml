@@ -5,6 +5,8 @@ on:
     branches: [ main ]  # 当推送到 main 分支时触发
     paths:
       - 'weekly_issues.json'  # 当此文件发生变化时触发
+  schedule:
+    - cron: 30 18 * * *  # UTC 18:30 (北京时间凌晨2:30)
   workflow_dispatch:    # 允许手动触发
 
 jobs:
