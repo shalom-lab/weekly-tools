@@ -123,6 +123,9 @@ async function crawlWeeklyIssues() {
 
         // 合并新旧数据并保存
         const allIssues = [...existingIssues, ...uniqueNewIssues];
+        // 按日期排序 最新的排在最前面
+        allIssues.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+        
         await saveIssues(allIssues);
 
         return uniqueNewIssues;
