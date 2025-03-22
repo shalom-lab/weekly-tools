@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]  # 当推送到 main 分支时触发
+    paths:
+      - 'weekly_issues.json'  # 当此文件发生变化时触发
   workflow_dispatch:    # 允许手动触发
 
 jobs:
