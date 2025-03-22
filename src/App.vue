@@ -113,9 +113,9 @@ const pageSize = ref(10)
 // 计算每页显示数量
 const calculatePageSize = () => {
     // 列表项高度: padding(16px * 2) + 标题行高(24px) + meta行高(21px) + border(1px) = 78px
-    const itemHeight = 75
+    const itemHeight = 78
     // 计算可用高度: 窗口高度 - 导航栏(64px) - 分页控件(64px) - 上下padding(32px)
-    const availableHeight = window.innerHeight - 160 // 增加一些余量
+    const availableHeight = window.innerHeight - 200 // 增加一些余量
     // 计算可显示的数量
     const calculatedSize = Math.floor(availableHeight / itemHeight) - 1 // 减1确保有足够空间
     pageSize.value = Math.max(5, calculatedSize) // 最少显示5条
