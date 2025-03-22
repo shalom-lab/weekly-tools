@@ -3,8 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]  # 当推送到 main 分支时触发
-  schedule:
-    - cron: 30 18 * * *  # UTC 18:30 (北京时间凌晨2:30)
+  workflow_run:
+    workflows: ["Fetch Daily Updates"]  # 监听 抓取数据
+    types:
+      - completed
   workflow_dispatch:    # 允许手动触发
 
 jobs:
