@@ -1,5 +1,13 @@
 [
   {
+    "title": "【网站自荐】yesorno.run",
+    "issueNumber": "6775",
+    "datetime": "2025-05-01T01:55:53.000Z",
+    "author": "outwebfeng",
+    "content": "网址：https://yesorno.run\n描述：当你犹豫不决，不知道怎么决策时，可以用 yesorno.run 来辅助决策。",
+    "html": "<div data-testid=\"markdown-body\" data-team-hovercards-enabled=\"true\" class=\"markdown-body\" data-turbolinks=\"false\"><div class=\"Box-sc-g0xbh4-0 markdown-body NewMarkdownViewer-module__safe-html-box--cRsz0\"><p dir=\"auto\">网址：<a href=\"https://yesorno.run\" rel=\"nofollow\">https://yesorno.run</a></p>\n<p dir=\"auto\">描述：当你犹豫不决，不知道怎么决策时，可以用 yesorno.run 来辅助决策。</p></div></div>"
+  },
+  {
     "title": "【工具自荐】可以在屏幕上看到当前节气、侯应、干支时间，还可以快速排八字的iOS App",
     "issueNumber": "6773",
     "datetime": "2025-04-30T12:48:54.000Z",
