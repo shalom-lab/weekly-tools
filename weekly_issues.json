@@ -1,5 +1,13 @@
 [
   {
+    "title": "【开源自荐】Input Source Pro - 根据当前访问的应用/网站自动切换输入法",
+    "issueNumber": "6780",
+    "datetime": "2025-05-02T20:34:13.000Z",
+    "author": "weekly",
+    "content": "项目地址：https://github.com/runjuu/InputSourcePro\n官网地址：https://inputsource.pro\n作为多输入法用户，我经常会遇到弄混输入法的情况。虽然大部分情况下无关痛痒，但注意力集中时被这种事情打断，多少也有点影响做事的节奏，于是就自己写了个小工具。\n主要功能：\n根据应用切换输入法\n可以为不同 App 设定默认的输入法类型，在每次使用时不再浪费时间手动切换。在使用 Spotlight 这类应用时也能自动切换。\n根据网站切换输入法\n通过自定义规则，能够根据浏览器当前页面自动切换输入法。目前支持 Safari、Chrome、Edge、Firefox、Brave、Vivaldi、Arc 和 Zen 浏览器。\n快捷键切换输入法\n除了指定切换到某个输入法以外，也支持在输入法组里循环切换。\n输入法提示\n除了通过各种事件触发输入法提示以外，也可以在大部分应用/网站中的输入光标处持续显示一个小提示，这样每次输入前都心里有数。",
+    "html": "<div data-testid=\"markdown-body\" data-team-hovercards-enabled=\"true\" class=\"markdown-body\" data-turbolinks=\"false\"><div class=\"Box-sc-g0xbh4-0 markdown-body NewMarkdownViewer-module__safe-html-box--cRsz0\"><p dir=\"auto\">项目地址：<a href=\"https://github.com/runjuu/InputSourcePro\">https://github.com/runjuu/InputSourcePro</a><br>\n官网地址：<a href=\"https://inputsource.pro\" rel=\"nofollow\">https://inputsource.pro</a></p>\n<p dir=\"auto\">作为多输入法用户，我经常会遇到弄混输入法的情况。虽然大部分情况下无关痛痒，但注意力集中时被这种事情打断，多少也有点影响做事的节奏，于是就自己写了个小工具。</p>\n<p dir=\"auto\">主要功能：</p>\n<h3 dir=\"auto\">根据应用切换输入法</h3>\n<p dir=\"auto\">可以为不同 App 设定默认的输入法类型，在每次使用时不再浪费时间手动切换。在使用 Spotlight 这类应用时也能自动切换。</p>\n<h3 dir=\"auto\">根据网站切换输入法</h3>\n<p dir=\"auto\">通过自定义规则，能够根据浏览器当前页面自动切换输入法。目前支持 Safari、Chrome、Edge、Firefox、Brave、Vivaldi、Arc 和 Zen 浏览器。</p>\n<h3 dir=\"auto\">快捷键切换输入法</h3>\n<p dir=\"auto\">除了指定切换到某个输入法以外，也支持在输入法组里循环切换。</p>\n<h3 dir=\"auto\">输入法提示</h3>\n<p dir=\"auto\">除了通过各种事件触发输入法提示以外，也可以在大部分应用/网站中的输入光标处持续显示一个小提示，这样每次输入前都心里有数。</p></div></div>"
+  },
+  {
     "title": "【开源自荐】DeckTap：零安装演讲遥控器，让手机变身翻页神器",
     "issueNumber": "6779",
     "datetime": "2025-05-02T17:22:44.000Z",
