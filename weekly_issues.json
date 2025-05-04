@@ -1,5 +1,13 @@
 [
   {
+    "title": "【开源自荐】Ncurator(馆长) - 浏览器插件形式的知识库AI问答助手",
+    "issueNumber": "6785",
+    "datetime": "2025-05-04T02:12:47.000Z",
+    "author": "Yoan98",
+    "content": "本质上就是一个构建知识库,并支持语义搜索+ai回答的工具, 但是以浏览器插件的形式存在,更好的与浏览器相关功能结合,如导入书签来构建本地知识库\n\n轻松上手: 无需复杂设置，下载即用。\n数据安全: 所有数据仅保存在你的本地设备上。\n免费 AI: 可选择本地 LLM 模型，实现免费 AI 功能。\n浏览器集成: 作为浏览器插件，提供便捷的使用体验。\n无限文档: 文档数量仅受你本地设备存储空间的限制。\n离线使用: 下载模型后可完全离线使用。\n多源导入: 支持 PDF, DOCX, 网页爬取, 浏览器书签等。\n智能问答: 基于语义和关键词搜索，智能理解问题并从知识库检索信息。\n\n仓库地址:\nhttps://github.com/Yoan98/Ncurator",
+    "html": "<div data-testid=\"markdown-body\" data-team-hovercards-enabled=\"true\" class=\"markdown-body\" data-turbolinks=\"false\"><div class=\"Box-sc-g0xbh4-0 markdown-body NewMarkdownViewer-module__safe-html-box--cRsz0\"><p dir=\"auto\">本质上就是一个构建知识库,并支持语义搜索+ai回答的工具, 但是以浏览器插件的形式存在,更好的与浏览器相关功能结合,如导入书签来构建本地知识库</p>\n<ul dir=\"auto\">\n<li><strong>轻松上手</strong>: 无需复杂设置，下载即用。</li>\n<li><strong>数据安全</strong>: 所有数据仅保存在你的本地设备上。</li>\n<li><strong>免费 AI</strong>: 可选择本地 LLM 模型，实现免费 AI 功能。</li>\n<li><strong>浏览器集成</strong>: 作为浏览器插件，提供便捷的使用体验。</li>\n<li><strong>无限文档</strong>: 文档数量仅受你本地设备存储空间的限制。</li>\n<li><strong>离线使用</strong>: 下载模型后可完全离线使用。</li>\n<li><strong>多源导入</strong>: 支持 PDF, DOCX, 网页爬取, 浏览器书签等。</li>\n<li><strong>智能问答</strong>: 基于语义和关键词搜索，智能理解问题并从知识库检索信息。</li>\n</ul>\n<p dir=\"auto\">仓库地址:<br>\n<a href=\"https://github.com/Yoan98/Ncurator\">https://github.com/Yoan98/Ncurator</a></p></div></div>"
+  },
+  {
     "title": "【开源自荐】Input Source Pro - 根据当前访问的应用/网站自动切换输入法",
     "issueNumber": "6780",
     "datetime": "2025-05-02T20:34:13.000Z",
