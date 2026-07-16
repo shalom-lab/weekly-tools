@@ -25,27 +25,26 @@ defineEmits(['update:modelValue']);
 .fav-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  border: 1px solid var(--border-color, #e0e0e0);
-  background: #fff;
-  border-radius: 4px;
-  padding: 0.25rem 0.6rem;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  padding: 0;
   font-size: 0.8125rem;
-  color: #666;
+  color: #888;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s;
+  line-height: 1;
+  justify-self: start;
 }
 
 .fav-btn .icon {
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
   color: #ccc;
 }
 
 .fav-btn.on {
-  border-color: #e57373;
   color: #c62828;
-  background: #fff5f5;
 }
 
 .fav-btn.on .icon {
@@ -53,7 +52,11 @@ defineEmits(['update:modelValue']);
 }
 
 .fav-btn:hover:not(:disabled) {
-  border-color: #e57373;
+  color: #e53935;
+}
+
+.fav-btn:hover:not(:disabled) .icon {
+  color: #e53935;
 }
 
 .fav-btn:disabled {

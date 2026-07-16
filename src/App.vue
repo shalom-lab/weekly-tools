@@ -158,17 +158,17 @@
             >
               {{ selectedIssue.author }}
             </a>
+            <FavoriteButton
+              :model-value="user.isFavorite(selectedIssue.issueNumber)"
+              :disabled="user.syncing.value"
+              @update:model-value="onFavorite"
+            />
           </div>
           <div class="detail-actions">
             <StarRating
               :model-value="user.getRating(selectedIssue.issueNumber)"
               :disabled="user.syncing.value"
               @update:model-value="onRate"
-            />
-            <FavoriteButton
-              :model-value="user.isFavorite(selectedIssue.issueNumber)"
-              :disabled="user.syncing.value"
-              @update:model-value="onFavorite"
             />
           </div>
         </div>
@@ -748,11 +748,14 @@ body {
 }
 
 .detail-meta {
-  display: flex;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: auto minmax(4rem, max-content) auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
   margin-top: 0.5rem;
   font-size: 0.85rem;
   color: #666;
+  justify-content: start;
 }
 
 .detail-actions {
