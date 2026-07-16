@@ -1,13 +1,6 @@
 {
-  "ratings": {
-    "10739": 4,
-    "10740": 2,
-    "10742": 5
-  },
-  "favorites": {
-    "10742": true,
-    "10744": true
-  },
+  "ratings": {},
+  "favorites": {},
   "categories_all": [
     "AI",
     "Web",
