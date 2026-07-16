@@ -1,6 +1,8 @@
 {
   "ratings": {},
-  "favorites": {},
+  "favorites": {
+    "10744": true
+  },
   "categories_all": [
     "AI",
     "Web",
