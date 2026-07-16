@@ -2,47 +2,49 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]  # 当推送到 main 分支时触发
+    branches: [main]
   workflow_run:
-    workflows: ["Fetch Daily Updates"]  # 监听 抓取数据
+    workflows: ["Fetch Daily Updates"]
     types:
       - completed
-  workflow_dispatch:    # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # 抓取失败时不部署
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
       pages: write
       id-token: write
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+        with:
+          ref: main
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+          cache: 'npm'
+
       - name: Install Dependencies
-        run: npm install
-        
-      - name: Fetch Latest Data
-        run: npm run fetch
-        
+        run: npm ci
+
       - name: Build
         run: npm run build
-        
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-        
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
-          
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4 
+        uses: actions/deploy-pages@v4

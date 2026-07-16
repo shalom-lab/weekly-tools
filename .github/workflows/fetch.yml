@@ -3,66 +3,47 @@ name: Fetch Daily Updates
 on:
   schedule:
     - cron: '0 18 * * *'  # UTC 18:00 (北京时间凌晨2:00)
-  workflow_dispatch:      # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   fetch-and-commit:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-        
-      - name: Install Chrome dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgbm-dev \
-            libxkbcommon-x11-0 \
-            libgtk-3-0 \
-            libnss3 \
-            libxss1 \
-            libasound2t64 \
-            fonts-noto-cjk
-          
+          cache: 'npm'
+
       - name: Install dependencies
-        run: |
-          npm install
-          # 确保安装最新版本的 puppeteer
-          npm install puppeteer@latest
-          
-      - name: Run scraper
+        run: npm ci
+
+      - name: Run scraper (GitHub API)
         env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
-        run: |
-          npm run fetch
-          
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run fetch
+
       - name: Check for Changes
         id: verify_diff
         run: |
-          echo "Checking if file exists..."
-          if [ ! -f weekly_issues.json ]; then
-            echo "File does not exist"
-            echo "changed=true" >> $GITHUB_OUTPUT
+          git add public/data/issues
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "File exists, checking for changes..."
-            git add weekly_issues.json
-            git diff --cached --quiet weekly_issues.json || {
-              echo "Changes detected"
-              echo "changed=true" >> $GITHUB_OUTPUT
-            }
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-          
+
       - name: Commit and Push
         if: steps.verify_diff.outputs.changed == 'true'
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add weekly_issues.json
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/data/issues
           git commit -m "Auto fetch: $(date +'%Y-%m-%d')"
-          git push 
+          git push

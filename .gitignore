@@ -1,1 +1,6 @@
 node_modules
+dist
+weekly_issues.json
+.env
+.env.local
+*.log

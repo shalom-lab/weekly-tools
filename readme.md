@@ -3,82 +3,84 @@
 [![Deploy to GitHub Pages](https://github.com/shalom-lab/weekly-tools/actions/workflows/deploy.yml/badge.svg)](https://github.com/shalom-lab/weekly-tools/actions/workflows/deploy.yml)
 [![Fetch Daily Updates](https://github.com/shalom-lab/weekly-tools/actions/workflows/fetch.yml/badge.svg)](https://github.com/shalom-lab/weekly-tools/actions/workflows/fetch.yml)
 
-🔗 在线访问：[https://shalom-lab.github.io/weekly-tools/](https://github.com/shalom-lab/weekly-tools/)
+🔗 [https://shalom-lab.github.io/weekly-tools/](https://shalom-lab.github.io/weekly-tools/) · 建议电脑端访问
 
-> 💡 建议使用电脑端访问以获得最佳浏览体验
+聚合 [@ruanyf/weekly](https://github.com/ruanyf/weekly) Issues 里的「自荐 / 推荐」：搜索、五星评分、收藏，支持 BYOK 把个人数据写回仓库。
 
-## 项目介绍
+## 功能
 
-这是一个基于 Vue 3 开发的工具类网站，用于展示和搜索来自 [@ruanyf/weekly](https://github.com/ruanyf/weekly) 仓库 issues 中的工具推荐。项目每天凌晨自动抓取最新的工具分享，为开发者提供便捷的工具发现和搜索服务。
+- 每日自动更新（GitHub REST API）
+- 标题 / 正文搜索，桌面双栏
+- 评分 + 收藏（`public/data/user.json`，也可直接改文件）
+- BYOK：本机 Token 同步评分/收藏
+- Issue 按年分片，单文件近 40MB 再切分
 
-### 主要特点
+## 数据文件
 
-- 🔄 每日自动更新数据
-- 🔍 支持标题和内容搜索
-- 📖 优雅的阅读体验
-- ⚡️ 基于 Vite 构建，快速加载
-- 💻 优化的桌面端双栏布局
-- 📱 基础的移动端适配
+| 路径 | 说明 |
+|------|------|
+| `public/data/issues/manifest.json` | 分片索引 |
+| `public/data/issues/*.json` | Issue 列表（markdown `body`） |
+| `public/data/user.json` | `{ "ratings": { "1234": 5 }, "favorites": { "1234": true } }` |
 
-### 技术栈
+## BYOK / localStorage
 
-- Vue 3 - 渐进式 JavaScript 框架
-- Vite - 下一代前端构建工具
-- GitHub Actions - 自动化工作流
-- GitHub Pages - 静态网站托管
-- Puppeteer - 网页内容抓取
+前端写仓库用的 Token **单独**存在浏览器里：
 
+| Key | 用途 |
+|-----|------|
+| **`weekly-tools-github-token`** | GitHub PAT（必填才能同步） |
+| `weekly-tools-settings` | 仓库 owner / name / branch 等 |
 
-## 自动化流程
+### 提前写入（推荐）
 
-项目使用 GitHub Actions 实现了两个自动化工作流：
+打开站点后，在控制台执行：
 
-### 1. 数据更新 (`fetch.yml`)
-- ⏰ 定时：每天凌晨 2 点（UTC+8）自动运行
-- 📥 功能：抓取最新的工具推荐
-- 💾 存储：更新 weekly_issues.json 文件
-- 🤖 自动提交：仅在有新数据时提交更新
+```js
+localStorage.setItem('weekly-tools-github-token', 'ghp_你的Token')
+```
 
-### 2. 页面部署 (`deploy.yml`)
-- 🔄 触发：代码推送到 main 分支或手动触发
-- 🏗️ 流程：安装依赖 → 构建 → 部署
-- 📤 输出：自动部署到 GitHub Pages
-- 🔍 状态：可在 Actions 页面查看部署日志
+然后刷新。应用启动时会先检测该 key；有值即可评分同步，不必再去「设置」里粘贴。
 
-## 功能特性
+检查是否已写入：
 
-- 📝 工具列表展示
-  - 时间倒序排列
-  - 分页浏览
-  - 自适应页面高度
+```js
+localStorage.getItem('weekly-tools-github-token')
+```
 
-- 🔍 搜索功能
-  - 支持标题搜索
-  - 支持内容搜索
-  - 实时过滤
+清除：
 
-- 📱 响应式设计
-  - 适配桌面端
-  - 优化阅读体验
-  - 美观的滚动效果
+```js
+localStorage.removeItem('weekly-tools-github-token')
+```
 
-## 贡献指南
+Token 权限：目标仓库的 **`contents:write`**。只存在本机，不会发到本站服务器。
 
-欢迎提交 Issue 和 Pull Request 来帮助改进这个项目：
+也可在页面「设置」Tab 填写；旧版写在 `weekly-tools-settings.githubToken` 里的值会自动迁移到上面的独立 key。
 
-1. Fork 本仓库
-2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的改动 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开一个 Pull Request
+## 本地开发
+
+```bash
+npm install
+npm run fetch   # 爬虫用环境变量 GITHUB_TOKEN（与前端 BYOK 无关）
+npm run dev
+```
+
+## 自动化
+
+| Workflow | 时机 | 作用 |
+|----------|------|------|
+| `fetch.yml` | 每天北京时间 02:00 | API 增量抓取，有变更才提交 `public/data/issues` |
+| `deploy.yml` | push `main` / 抓取成功后 | 构建并部署 GitHub Pages |
+
+## 技术栈
+
+Vue 3 · Vite · GitHub Actions / Pages · marked + DOMPurify
 
 ## 致谢
 
-- 感谢 [@ruanyf](https://github.com/ruanyf) 的科技爱好者周刊
-- 感谢所有为周刊投稿的贡献者
-- 感谢所有开源工具的作者
+[@ruanyf](https://github.com/ruanyf) 科技爱好者周刊，以及所有投稿者与开源作者。
 
 ## 许可证
 
 [MIT License](LICENSE) © 2024-PRESENT shalom-lab
-
