@@ -4,8 +4,6 @@ import { putJsonFile, hasToken, ALLOWED_USER_DATA_PATH } from './github.js';
 
 const LOCAL_KEY = 'weekly-tools-user-local';
 const DIRTY_KEY = 'weekly-tools-user-dirty';
-/** 本地先写，短延迟后后台同步，避免频繁点选打爆 API */
-const SYNC_DEBOUNCE_MS = 2000;
 
 function emptyPayload() {
   return {
@@ -80,7 +78,6 @@ const syncHint = ref('');
 const loaded = ref(false);
 const pendingSync = ref(false);
 
-let syncTimer = null;
 let syncLock = null;
 
 function snapshot() {
@@ -105,15 +102,7 @@ function persistLocal() {
   writeLocal(snapshot());
   markDirty();
   pendingSync.value = true;
-}
-
-function queueSync(quiet = false) {
-  if (!hasToken()) {
-    if (!quiet) syncHint.value = '已保存在本机；配置 Token 后可同步';
-    return;
-  }
-  if (!quiet) syncHint.value = '将自动同步…';
-  scheduleSync();
+  syncHint.value = hasToken() ? '有未同步的本地改动' : '已保存在本机；配置 Token 后可同步';
 }
 
 export function useUserData() {
@@ -130,7 +119,6 @@ export function useUserData() {
       syncHint.value = '';
     }
     loaded.value = true;
-    if (isDirty() && hasToken()) scheduleSync();
   }
 
   function getRating(issueNumber) {
@@ -158,7 +146,6 @@ export function useUserData() {
     else nextRatings[id] = Math.min(5, Math.max(0, Number(stars) || 0));
     ratings.value = nextRatings;
     persistLocal();
-    queueSync();
   }
 
   async function setFavorite(issueNumber, value) {
@@ -174,7 +161,6 @@ export function useUserData() {
     }
     favorites.value = nextFav;
     persistLocal();
-    queueSync();
   }
 
   function setCategoriesAll(list) {
@@ -188,7 +174,6 @@ export function useUserData() {
     }
     category.value = nextMap;
     persistLocal();
-    queueSync();
   }
 
   function toggleCategory(issueNumber, name) {
@@ -206,26 +191,15 @@ export function useUserData() {
     else delete map[id];
     category.value = map;
     persistLocal();
-    // 类别点选频繁：安静排队同步
-    queueSync(true);
-  }
-
-  function scheduleSync() {
-    syncError.value = '';
-    if (syncTimer) clearTimeout(syncTimer);
-    syncTimer = setTimeout(() => {
-      syncTimer = null;
-      syncToRepo().catch(() => {});
-    }, SYNC_DEBOUNCE_MS);
   }
 
   async function syncToRepo() {
-    if (syncTimer) {
-      clearTimeout(syncTimer);
-      syncTimer = null;
-    }
     if (!hasToken()) {
       syncError.value = '未配置 Token';
+      throw new Error(syncError.value);
+    }
+    if (!pendingSync.value && !isDirty()) {
+      syncHint.value = '';
       return;
     }
     if (syncLock) return syncLock;

@@ -40,6 +40,16 @@
         </div>
         <button
           type="button"
+          class="sync-remote-btn"
+          :class="{ primary: canSyncRemote }"
+          :disabled="!canSyncRemote || user.syncing.value"
+          :title="syncRemoteTitle"
+          @click="onSyncRemote"
+        >
+          {{ user.syncing.value ? '同步中…' : '同步到远程' }}
+        </button>
+        <button
+          type="button"
           class="icon-btn"
           :class="{ active: showSettings }"
           title="设置"
@@ -306,6 +316,15 @@ function calculatePageSize() {
   }
 }
 
+const canSyncRemote = computed(() => user.pendingSync.value);
+
+const syncRemoteTitle = computed(() => {
+  if (user.syncing.value) return '正在同步…';
+  if (!user.pendingSync.value) return '当前没有未同步的改动';
+  if (!user.hasToken()) return '请先在设置中配置 Token';
+  return '将本地改动提交到仓库';
+});
+
 const statusMessage = computed(() => {
   if (loadError.value) return loadError.value;
   if (user.syncError.value) return user.syncError.value;
@@ -321,6 +340,19 @@ const statusTone = computed(() => {
   if (user.syncHint.value) return 'soft';
   return '';
 });
+
+async function onSyncRemote() {
+  if (!user.pendingSync.value || user.syncing.value) return;
+  if (!user.hasToken()) {
+    showSettings.value = true;
+    return;
+  }
+  try {
+    await user.syncToRepo();
+  } catch {
+    /* syncError already set */
+  }
+}
 
 const timeFilters = [
   { id: '7d', label: '近一周' },
@@ -724,6 +756,40 @@ body {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.sync-remote-btn {
+  height: 36px;
+  padding: 0 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #999;
+  font-size: 0.85rem;
+  cursor: not-allowed;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sync-remote-btn.primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+  cursor: pointer;
+}
+
+.sync-remote-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.sync-remote-btn:disabled:not(.primary) {
+  opacity: 1;
+}
+
+.sync-remote-btn.primary:disabled {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .icon-btn {

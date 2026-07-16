@@ -43,15 +43,12 @@
       <div class="actions">
         <button type="button" class="primary" @click="save">保存设置</button>
         <button type="button" class="ghost" @click="clear">清除 Token</button>
-        <button type="button" class="ghost" :disabled="syncing || !tokenDetected" @click="sync">
-          {{ syncing ? '同步中…' : '立即同步' }}
-        </button>
       </div>
     </section>
 
     <section class="card">
       <h3>分类字典</h3>
-      <p class="section-hint">一行一个，顺序即展示顺序。保存后写入本地并自动同步。</p>
+      <p class="section-hint">一行一个，顺序即展示顺序。保存后先写入本地，点顶部「同步到远程」提交仓库。</p>
       <textarea
         v-model="categoriesText"
         class="category-textarea"
@@ -93,7 +90,6 @@ const form = reactive({
 const showToken = ref(false);
 const status = ref('');
 const statusType = ref('ok');
-const syncing = ref(false);
 const tokenDetected = ref(false);
 const categoriesText = ref('');
 const categoriesEditing = ref(false);
@@ -144,29 +140,7 @@ function saveCategories() {
   user.setCategoriesAll(previewTags.value);
   categoriesText.value = previewTags.value.join('\n');
   statusType.value = 'ok';
-  status.value = '分类已更新（本地优先，页面会自动同步）';
-}
-
-async function sync() {
-  saveSettings({ ...form });
-  refreshTokenStatus();
-  if (!tokenDetected.value) {
-    statusType.value = 'err';
-    status.value = '请先配置 Token';
-    return;
-  }
-  syncing.value = true;
-  status.value = '';
-  try {
-    await user.syncToRepo();
-    statusType.value = 'ok';
-    status.value = '同步完成';
-  } catch (err) {
-    statusType.value = 'err';
-    status.value = err.message || String(err);
-  } finally {
-    syncing.value = false;
-  }
+  status.value = '分类已更新（本地）；点顶部「同步到远程」提交';
 }
 </script>
 
