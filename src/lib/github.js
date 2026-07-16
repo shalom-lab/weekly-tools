@@ -53,6 +53,7 @@ async function api(path, { method = 'GET', body } = {}) {
       Authorization: `Bearer ${token}`,
       'X-GitHub-Api-Version': '2022-11-28',
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -68,7 +69,6 @@ async function api(path, { method = 'GET', body } = {}) {
 
 export async function getFile(path) {
   const settings = loadSettings();
-  // 加时间戳避免中间层缓存旧 sha
   const data = await api(
     `/contents/${path}?ref=${encodeURIComponent(settings.branch)}&_=${Date.now()}`
   );
@@ -76,31 +76,43 @@ export async function getFile(path) {
 }
 
 /**
- * 更新 user.json。409 = 远端 sha 已变（常见于连续快速同步），
- * 会重新 GET sha / 从错误信息解析 sha 后重试。
+ * @param {object} [options]
+ * @param {(remote: object) => object} [options.mergeRemote] 409 时先读远端再合并
  */
-export async function putJsonFile(path, data, message) {
+export async function putJsonFile(path, data, message, options = {}) {
   const safePath = resolveUserDataPath(path);
   const settings = loadSettings();
-  const content = `${JSON.stringify(data, null, 2)}\n`;
-  const encoded = toBase64(content);
+  let payload = data;
   let hintSha = '';
 
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  for (let attempt = 1; attempt <= 6; attempt++) {
     let sha = hintSha;
     hintSha = '';
-
-    if (!sha) {
-      try {
-        const existing = await getFile(safePath);
-        sha = existing.sha;
-      } catch (err) {
-        if (!String(err.message).includes('404')) throw err;
-      }
-    }
+    let remoteJson = null;
 
     try {
-      return await api(`/contents/${safePath}`, {
+      const existing = await getFile(safePath);
+      sha = sha || existing.sha;
+      try {
+        remoteJson = JSON.parse(existing.content);
+      } catch {
+        remoteJson = null;
+      }
+    } catch (err) {
+      if (!String(err.message).includes('404')) throw err;
+      sha = '';
+    }
+
+    // 有远端且提供合并函数时，每次用最新远端与本地合并（本地字段优先）
+    if (remoteJson && typeof options.mergeRemote === 'function') {
+      payload = options.mergeRemote(remoteJson);
+    }
+
+    const content = `${JSON.stringify(payload, null, 2)}\n`;
+    const encoded = toBase64(content);
+
+    try {
+      const result = await api(`/contents/${safePath}`, {
         method: 'PUT',
         body: {
           message,
@@ -109,12 +121,13 @@ export async function putJsonFile(path, data, message) {
           ...(sha ? { sha } : {}),
         },
       });
+      return { result, payload };
     } catch (err) {
       const msg = String(err.message);
       const conflictSha = parseShaFromConflict(msg);
-      if ((msg.includes('409') || conflictSha) && attempt < 5) {
-        hintSha = conflictSha;
-        await new Promise((r) => setTimeout(r, 250 * attempt));
+      if ((msg.includes('409') || conflictSha) && attempt < 6) {
+        hintSha = '';
+        await new Promise((r) => setTimeout(r, 400 * attempt));
         continue;
       }
       throw err;

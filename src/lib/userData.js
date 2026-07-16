@@ -4,7 +4,7 @@ import { putJsonFile, hasToken, ALLOWED_USER_DATA_PATH } from './github.js';
 
 const LOCAL_KEY = 'weekly-tools-user-local';
 const DIRTY_KEY = 'weekly-tools-user-dirty';
-const SYNC_DEBOUNCE_MS = 1500;
+const SYNC_DEBOUNCE_MS = 1800;
 
 function emptyPayload() {
   return { ratings: {}, favorites: {} };
@@ -59,6 +59,12 @@ function persistLocal() {
   pendingSync.value = true;
 }
 
+/**
+ * 收藏规则：
+ * - favorites[id] === true  → 明确收藏
+ * - favorites[id] === false → 单独取消（即使有评分也不算收藏）
+ * - 未设置时：评分 >= 1 默认视为已收藏
+ */
 export function useUserData() {
   async function init() {
     const remote = await loadUserData();
@@ -90,7 +96,11 @@ export function useUserData() {
   }
 
   function isFavorite(issueNumber) {
-    return Boolean(favorites.value[String(issueNumber)]);
+    const id = String(issueNumber);
+    const flag = favorites.value[id];
+    if (flag === false) return false;
+    if (flag === true) return true;
+    return getRating(id) >= 1;
   }
 
   async function setRating(issueNumber, stars) {
@@ -99,6 +109,7 @@ export function useUserData() {
     if (!stars) delete next[id];
     else next[id] = Math.min(5, Math.max(0, Number(stars) || 0));
     ratings.value = next;
+    // 打分 >=1 且未单独取消过 → 不必写 favorites；取消收藏用 false 覆盖
     persistLocal();
     if (!hasToken()) {
       syncHint.value = '已保存在本机；到「设置」填写 Token 可同步到仓库';
@@ -111,8 +122,8 @@ export function useUserData() {
   async function setFavorite(issueNumber, value) {
     const id = String(issueNumber);
     const next = { ...favorites.value };
-    if (value) next[id] = true;
-    else delete next[id];
+    // true / false 都显式写入，false = 单独取消（覆盖「有评分即收藏」）
+    next[id] = Boolean(value);
     favorites.value = next;
     persistLocal();
     if (!hasToken()) {
@@ -141,7 +152,6 @@ export function useUserData() {
       syncError.value = '未配置 Token';
       return;
     }
-    // 串行化，避免连续评分打出多个 PUT 互相 409
     if (syncLock) return syncLock;
 
     syncLock = (async () => {
@@ -149,12 +159,20 @@ export function useUserData() {
       syncError.value = '';
       try {
         const payload = snapshot();
-        await putJsonFile(
+        const { payload: written } = await putJsonFile(
           ALLOWED_USER_DATA_PATH,
           payload,
-          `chore: update user data (${new Date().toISOString().slice(0, 10)})`
+          `chore: update user data (${new Date().toISOString().slice(0, 10)})`,
+          {
+            mergeRemote: (remote) => ({
+              ratings: { ...(remote.ratings || {}), ...payload.ratings },
+              favorites: { ...(remote.favorites || {}), ...payload.favorites },
+            }),
+          }
         );
-        writeLocal(payload);
+        ratings.value = written.ratings || {};
+        favorites.value = written.favorites || {};
+        writeLocal(written);
         clearDirty();
         pendingSync.value = false;
         syncHint.value = '已同步到仓库';
@@ -174,9 +192,17 @@ export function useUserData() {
     return syncLock;
   }
 
-  const favoriteIds = computed(() =>
-    Object.keys(favorites.value).filter((k) => favorites.value[k])
-  );
+  const favoriteIds = computed(() => {
+    const ids = new Set();
+    for (const id of Object.keys(ratings.value)) {
+      if (isFavorite(id)) ids.add(id);
+    }
+    for (const [id, flag] of Object.entries(favorites.value)) {
+      if (flag === true) ids.add(id);
+      if (flag === false) ids.delete(id);
+    }
+    return [...ids];
+  });
 
   return {
     ratings,

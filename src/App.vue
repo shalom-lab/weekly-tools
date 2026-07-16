@@ -36,7 +36,6 @@
           @click="activeTab = tab.id"
         >
           {{ tab.label }}
-          <span v-if="tab.id === 'favorites' && favoriteCount" class="badge">{{ favoriteCount }}</span>
         </button>
       </div>
 
@@ -59,6 +58,27 @@
 
     <div v-else class="main-content">
       <div class="issue-list">
+        <div class="list-filters">
+          <button
+            v-for="opt in timeFilters"
+            :key="opt.id"
+            type="button"
+            class="filter-chip"
+            :class="{ active: timeFilter === opt.id }"
+            @click="toggleTimeFilter(opt.id)"
+          >
+            {{ opt.label }}
+          </button>
+          <button
+            type="button"
+            class="filter-chip"
+            :class="{ active: favOnly || activeTab === 'favorites' }"
+            @click="toggleFavFilter"
+          >
+            已收藏
+          </button>
+        </div>
+
         <div class="list-content">
           <div
             v-for="issue in paginatedIssues"
@@ -90,7 +110,7 @@
             </div>
           </div>
           <div v-if="!paginatedIssues.length" class="list-empty">
-            {{ activeTab === 'favorites' ? '还没有收藏' : '没有匹配结果' }}
+            {{ showFavoritesOnly ? '没有符合条件的收藏' : '没有匹配结果' }}
           </div>
         </div>
 
@@ -185,18 +205,58 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 const issues = ref([]);
 const loadError = ref('');
+const timeFilter = ref(''); // '' | 7d | 30d | 90d | 180d
+const favOnly = ref(false);
 const user = useUserData();
 
 let searchTimer = null;
 
-const favoriteCount = computed(() => user.favoriteIds.value.length);
+const timeFilters = [
+  { id: '7d', label: '近一周' },
+  { id: '30d', label: '近1月' },
+  { id: '90d', label: '近3月' },
+  { id: '180d', label: '近半年' },
+];
+
+const showFavoritesOnly = computed(
+  () => favOnly.value || activeTab.value === 'favorites'
+);
+
+function toggleTimeFilter(id) {
+  timeFilter.value = timeFilter.value === id ? '' : id;
+  currentPage.value = 1;
+}
+
+function toggleFavFilter() {
+  if (activeTab.value === 'favorites') {
+    activeTab.value = 'browse';
+    favOnly.value = false;
+  } else {
+    favOnly.value = !favOnly.value;
+  }
+  currentPage.value = 1;
+}
+
+function withinTimeRange(datetime, filterId) {
+  if (!filterId) return true;
+  const days = { '7d': 7, '30d': 30, '90d': 90, '180d': 180 }[filterId];
+  if (!days) return true;
+  const t = new Date(datetime).getTime();
+  if (Number.isNaN(t)) return false;
+  return t >= Date.now() - days * 24 * 60 * 60 * 1000;
+}
 
 const filteredIssues = computed(() => {
   let list = issues.value;
-  if (activeTab.value === 'favorites') {
-    const ids = new Set(user.favoriteIds.value);
-    list = list.filter((i) => ids.has(String(i.issueNumber)));
+
+  if (showFavoritesOnly.value) {
+    list = list.filter((i) => user.isFavorite(i.issueNumber));
   }
+
+  if (timeFilter.value) {
+    list = list.filter((i) => withinTimeRange(i.datetime, timeFilter.value));
+  }
+
   const query = debouncedQuery.value.trim().toLowerCase();
   if (!query) return list;
   return list.filter(
@@ -237,9 +297,14 @@ watch(searchQuery, (val) => {
   }, 200);
 });
 
-watch(activeTab, () => {
+watch(activeTab, (tab) => {
   currentPage.value = 1;
   selectedIssue.value = null;
+  if (tab === 'favorites') favOnly.value = false;
+});
+
+watch([timeFilter, favOnly], () => {
+  currentPage.value = 1;
 });
 
 watch(totalPages, (n) => {
@@ -248,7 +313,7 @@ watch(totalPages, (n) => {
 
 function calculatePageSize() {
   const itemHeight = 78;
-  const availableHeight = window.innerHeight - 220;
+  const availableHeight = window.innerHeight - 260;
   pageSize.value = Math.max(5, Math.floor(availableHeight / itemHeight) - 1);
 }
 
@@ -412,17 +477,6 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.badge {
-  background: #e53935;
-  color: #fff;
-  font-size: 0.7rem;
-  border-radius: 999px;
-  padding: 0 0.4rem;
-  min-width: 1.1rem;
-  line-height: 1.2rem;
-  text-align: center;
-}
-
 .search-bar {
   flex: 1;
   min-width: 180px;
@@ -485,6 +539,37 @@ body {
   min-width: 0;
   height: 100%;
   overflow: hidden;
+}
+
+.list-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0 0 0.75rem;
+  flex-shrink: 0;
+}
+
+.filter-chip {
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: #555;
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+
+.filter-chip:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.filter-chip.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
 }
 
 .list-content {

@@ -4,7 +4,7 @@
     class="fav-btn"
     :class="{ on: modelValue }"
     :disabled="disabled"
-    :title="modelValue ? '取消收藏' : '收藏'"
+    :title="modelValue ? '取消收藏（可单独取消，不受评分影响）' : '收藏'"
     :aria-pressed="modelValue"
     @click="$emit('update:modelValue', !modelValue)"
   >
