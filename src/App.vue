@@ -759,19 +759,34 @@ body {
 }
 
 .detail-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(4rem, max-content) 4.75rem auto;
   gap: 0.65rem 1rem;
+  align-items: center;
   margin-top: 0.5rem;
   font-size: 0.85rem;
   color: #666;
+  justify-content: start;
 }
 
 .detail-meta .author-link {
   width: auto;
-  max-width: none;
-  justify-self: auto;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  justify-self: start;
+}
+
+.detail-meta :deep(.fav-btn) {
+  width: 100%;
+  justify-self: stretch;
+}
+
+.detail-meta :deep(.fav-btn .label) {
+  display: inline-block;
+  min-width: 3em;
+  text-align: left;
 }
 
 .empty-state {
