@@ -400,12 +400,6 @@ watch(totalPages, (n) => {
   if (currentPage.value > n) currentPage.value = n;
 });
 
-function calculatePageSize() {
-  const itemHeight = 78;
-  const availableHeight = window.innerHeight - 260;
-  pageSize.value = Math.max(5, Math.floor(availableHeight / itemHeight) - 1);
-}
-
 function githubProfile(author) {
   const login = String(author || '').replace(/[^a-zA-Z0-9-]/g, '');
   return login ? `https://github.com/${login}` : 'https://github.com';
