@@ -219,7 +219,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { loadIssues } from './lib/data.js';
@@ -244,6 +244,43 @@ const minStars = ref(0); // 0 = 不限；>= N
 const user = useUserData();
 
 let searchTimer = null;
+let listResizeObserver = null;
+
+function calculatePageSize() {
+  const contentEl = document.querySelector('.list-content');
+  const listEl = document.querySelector('.issue-list');
+  const filtersEl = document.querySelector('.list-filters');
+  const paginationEl = document.querySelector('.pagination');
+
+  let available = contentEl?.clientHeight || 0;
+  if (available < 48 && listEl) {
+    available =
+      listEl.clientHeight -
+      (filtersEl?.offsetHeight || 0) -
+      (paginationEl?.offsetHeight || 0);
+  }
+  if (available < 48) {
+    available = window.innerHeight - 210;
+  }
+
+  const itemEl = document.querySelector('.issue-item');
+  const measured = itemEl ? itemEl.getBoundingClientRect().height : 0;
+  // 略留 2px 余量，避免最后一条贴边滚动条
+  const itemHeight = Math.max(64, Math.ceil(measured || 72));
+  const next = Math.max(4, Math.floor((available - 2) / itemHeight));
+  if (next === pageSize.value) return;
+
+  const selectedId = selectedIssue.value?.issueNumber;
+  pageSize.value = next;
+  if (selectedId != null) {
+    const idx = filteredIssues.value.findIndex(
+      (i) => String(i.issueNumber) === String(selectedId)
+    );
+    if (idx >= 0) currentPage.value = Math.floor(idx / next) + 1;
+  } else if (currentPage.value > Math.ceil(filteredIssues.value.length / next)) {
+    currentPage.value = Math.max(1, Math.ceil(filteredIssues.value.length / next));
+  }
+}
 
 const statusMessage = computed(() => {
   if (loadError.value) return loadError.value;
@@ -454,7 +491,6 @@ function formatDate(datetime) {
 }
 
 onMounted(async () => {
-  calculatePageSize();
   window.addEventListener('resize', calculatePageSize);
   window.addEventListener('keydown', onKeydown);
   try {
@@ -463,11 +499,24 @@ onMounted(async () => {
   } catch (err) {
     loadError.value = err.message || String(err);
   }
+
+  await nextTick();
+  calculatePageSize();
+  requestAnimationFrame(() => {
+    calculatePageSize();
+    const listEl = document.querySelector('.issue-list');
+    if (listEl && typeof ResizeObserver !== 'undefined') {
+      listResizeObserver = new ResizeObserver(() => calculatePageSize());
+      listResizeObserver.observe(listEl);
+    }
+  });
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', calculatePageSize);
   window.removeEventListener('keydown', onKeydown);
+  listResizeObserver?.disconnect();
+  listResizeObserver = null;
   if (searchTimer) clearTimeout(searchTimer);
 });
 </script>
@@ -781,13 +830,13 @@ body {
   grid-template-columns: 1.1rem 1fr;
   gap: 0.45rem;
   align-items: start;
-  padding: 14px 12px;
+  padding: 12px;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   transition: background 0.15s;
   border-radius: 6px;
   box-sizing: border-box;
-  min-height: 72px;
+  min-height: 68px;
 }
 
 .issue-item:hover {
