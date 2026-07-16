@@ -1,6 +1,8 @@
 {
   "ratings": {
-    "10744": 5
+    "10742": 5
   },
-  "favorites": {}
+  "favorites": {
+    "10744": true
+  }
 }
