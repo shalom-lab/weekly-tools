@@ -75,24 +75,41 @@
     <div v-else class="main-content">
       <div class="issue-list">
         <div class="list-filters">
-          <button
-            v-for="opt in timeFilters"
-            :key="opt.id"
-            type="button"
-            class="filter-chip"
-            :class="{ active: timeFilter === opt.id }"
-            @click="toggleTimeFilter(opt.id)"
-          >
-            {{ opt.label }}
-          </button>
-          <button
-            type="button"
-            class="filter-chip"
-            :class="{ active: favOnly }"
-            @click="toggleFavFilter"
-          >
-            已收藏
-          </button>
+          <div class="filter-group" role="group" aria-label="时间">
+            <button
+              v-for="opt in timeFilters"
+              :key="opt.id"
+              type="button"
+              class="filter-chip"
+              :class="{ active: timeFilter === opt.id }"
+              @click="toggleTimeFilter(opt.id)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <div class="filter-group" role="group" aria-label="收藏">
+            <button
+              type="button"
+              class="filter-chip"
+              :class="{ active: favOnly }"
+              @click="toggleFavFilter"
+            >
+              已收藏
+            </button>
+          </div>
+          <div class="filter-group star-filter" role="group" :aria-label="starFilterLabel">
+            <button
+              v-for="n in 5"
+              :key="n"
+              type="button"
+              class="star-filter-btn"
+              :class="{ on: n <= minStars }"
+              :title="`${n} 星及以上`"
+              @click="toggleMinStars(n)"
+            >
+              ★
+            </button>
+          </div>
         </div>
 
         <div class="list-content">
@@ -222,6 +239,7 @@ const issues = ref([]);
 const loadError = ref('');
 const timeFilter = ref(''); // '' | 7d | 30d | 90d | 180d
 const favOnly = ref(false);
+const minStars = ref(0); // 0 = 不限；>= N
 const user = useUserData();
 
 let searchTimer = null;
@@ -264,6 +282,15 @@ function toggleFavFilter() {
   currentPage.value = 1;
 }
 
+function toggleMinStars(n) {
+  minStars.value = minStars.value === n ? 0 : n;
+  currentPage.value = 1;
+}
+
+const starFilterLabel = computed(() =>
+  minStars.value > 0 ? `${minStars.value} 星及以上` : '星级筛选'
+);
+
 function withinTimeRange(datetime, filterId) {
   if (!filterId) return true;
   const days = { '7d': 7, '30d': 30, '90d': 90, '180d': 180 }[filterId];
@@ -276,12 +303,15 @@ function withinTimeRange(datetime, filterId) {
 const filteredIssues = computed(() => {
   let list = issues.value;
 
+  // 时间 ∩ 收藏 ∩ 星级
+  if (timeFilter.value) {
+    list = list.filter((i) => withinTimeRange(i.datetime, timeFilter.value));
+  }
   if (favOnly.value) {
     list = list.filter((i) => user.isFavorite(i.issueNumber));
   }
-
-  if (timeFilter.value) {
-    list = list.filter((i) => withinTimeRange(i.datetime, timeFilter.value));
+  if (minStars.value > 0) {
+    list = list.filter((i) => user.getRating(i.issueNumber) >= minStars.value);
   }
 
   const query = debouncedQuery.value.trim().toLowerCase();
@@ -324,7 +354,7 @@ watch(searchQuery, (val) => {
   }, 200);
 });
 
-watch([timeFilter, favOnly], () => {
+watch([timeFilter, favOnly, minStars], () => {
   currentPage.value = 1;
 });
 
@@ -612,13 +642,51 @@ body {
 .list-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
   padding: 0 0 0.75rem;
   flex-shrink: 0;
 }
 
-.filter-chip {
+.filter-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: #f5f5f5;
+}
+
+.filter-group.star-filter {
+  margin-left: auto;
+  background: transparent;
+  padding: 0.15rem 0.35rem;
   border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.star-filter-btn {
+  border: none;
+  background: transparent;
+  padding: 0 1px;
+  font-size: 1rem;
+  line-height: 1;
+  color: #d0d0d0;
+  cursor: pointer;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.star-filter-btn.on {
+  color: #f5a623;
+}
+
+.star-filter-btn:hover {
+  transform: scale(1.12);
+}
+
+.filter-chip {
+  border: 1px solid transparent;
   background: #fff;
   color: #555;
   border-radius: 999px;
