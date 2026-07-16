@@ -16,6 +16,7 @@ export async function loadIssues() {
     ...issue,
     issueNumber: String(issue.issueNumber),
     body: issue.body || issue.content || '',
+    html: issue.html || '',
   }));
   issues.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
   return { manifest, issues };

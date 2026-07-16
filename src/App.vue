@@ -217,11 +217,15 @@ const paginatedIssues = computed(() => {
 
 const renderedBody = computed(() => {
   if (!selectedIssue.value) return '';
-  const html = marked.parse(selectedIssue.value.body || '');
-  return DOMPurify.sanitize(html, {
+  // 优先用抓取时保存的完整 HTML（含图片等），否则再本地渲染 markdown
+  const raw =
+    selectedIssue.value.html ||
+    marked.parse(selectedIssue.value.body || '');
+  return DOMPurify.sanitize(raw, {
     USE_PROFILES: { html: true },
-    FORBID_TAGS: ['style', 'iframe', 'form', 'input', 'button'],
-    FORBID_ATTR: ['style', 'onerror', 'onclick'],
+    ADD_ATTR: ['target', 'rel', 'loading', 'srcset', 'sizes'],
+    FORBID_TAGS: ['style', 'form', 'input', 'button', 'script', 'iframe'],
+    FORBID_ATTR: ['style', 'onerror', 'onclick', 'onload'],
   });
 });
 

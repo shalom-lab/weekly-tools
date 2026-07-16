@@ -26,7 +26,7 @@ async function loadManifest() {
   try {
     return JSON.parse(await fs.readFile(MANIFEST_FILE, 'utf8'));
   } catch {
-    return { version: 1, chunks: [], count: 0, updatedAt: null };
+    return { version: 2, chunks: [], count: 0, updatedAt: null };
   }
 }
 
@@ -50,9 +50,6 @@ function chunkKeyForIssue(issue) {
   return Number.isFinite(year) ? String(year) : 'unknown';
 }
 
-/**
- * Group by year; if a year exceeds MAX_CHUNK_BYTES, split into year-1, year-2, ...
- */
 function buildChunks(issues) {
   const byYear = new Map();
   for (const issue of issues) {
@@ -83,13 +80,12 @@ function buildChunks(issues) {
       bucket.push(issue);
       const size = Buffer.byteLength(JSON.stringify(bucket), 'utf8');
       if (size >= MAX_CHUNK_BYTES) {
-        // keep last item for next part if single item somehow huge
         if (bucket.length > 1) {
           const last = bucket.pop();
           flush();
           bucket.push(last);
         } else {
-          console.warn(`单条 issue #${issue.issueNumber} 接近分片上限，仍写入 ${year}`);
+          console.warn(`单条 issue #${issue.issueNumber} 接近分片上限，仍写入`);
           flush();
         }
       }
@@ -105,7 +101,6 @@ async function saveIssues(issues) {
   const chunks = buildChunks(issues);
   const chunkNames = chunks.map((c) => c.name);
 
-  // remove obsolete chunk files
   const existing = await fs.readdir(ISSUES_DIR).catch(() => []);
   for (const file of existing) {
     if (file === 'manifest.json') continue;
@@ -123,28 +118,36 @@ async function saveIssues(issues) {
     console.log(`写入 ${chunk.name}: ${chunk.issues.length} 条, ${mb} MB`);
   }
 
+  const withHtml = issues.filter((i) => i.html).length;
   const manifest = {
-    version: 1,
+    version: 2,
     chunks: chunkNames,
     count: issues.length,
+    withHtml,
+    hasHtml: withHtml > 0,
     updatedAt: new Date().toISOString(),
     maxChunkBytes: MAX_CHUNK_BYTES,
   };
   await fs.writeFile(MANIFEST_FILE, JSON.stringify(manifest, null, 2), 'utf8');
-  console.log(`manifest: ${issues.length} 条, ${chunkNames.length} 个分片`);
+  console.log(`manifest: ${issues.length} 条, html ${withHtml}, ${chunkNames.length} 个分片`);
 }
 
-async function githubFetch(url) {
+async function githubRequest(url, { method = 'GET', body, accept } = {}) {
   const headers = {
-    Accept: 'application/vnd.github+json',
+    Accept: accept || 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': 'weekly-tools-crawler',
   };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (body) headers['Content-Type'] = 'application/json';
 
   for (let attempt = 1; attempt <= 5; attempt++) {
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
 
     if (res.status === 403 || res.status === 429) {
       const retryAfter = Number(res.headers.get('retry-after')) || 0;
@@ -168,17 +171,30 @@ async function githubFetch(url) {
 
 function parseLinkNext(linkHeader) {
   if (!linkHeader) return null;
-  const match = linkHeader.split(',').map((s) => s.trim()).find((s) => s.includes('rel="next"'));
+  const match = linkHeader
+    .split(',')
+    .map((s) => s.trim())
+    .find((s) => s.includes('rel="next"'));
   if (!match) return null;
   const url = match.match(/<([^>]+)>/);
   return url ? url[1] : null;
 }
 
-/**
- * Fetch issues via REST API (not Puppeteer).
- * HTML scrape failures were usually DOM selector / UI changes — not CORS.
- * API returns markdown `body` reliably.
- */
+/** 用 GitHub GFM 渲染，保留图片与相对链接解析（context = 仓库） */
+async function renderMarkdownHtml(markdown) {
+  if (!markdown) return '';
+  const res = await githubRequest('https://api.github.com/markdown', {
+    method: 'POST',
+    accept: 'text/html',
+    body: {
+      text: markdown,
+      mode: 'gfm',
+      context: `${SOURCE_OWNER}/${SOURCE_REPO}`,
+    },
+  });
+  return res.text();
+}
+
 async function fetchSourceIssues({ since } = {}) {
   const results = [];
   let url = `https://api.github.com/repos/${SOURCE_OWNER}/${SOURCE_REPO}/issues?state=all&per_page=100&sort=created&direction=desc`;
@@ -187,11 +203,10 @@ async function fetchSourceIssues({ since } = {}) {
   let page = 1;
   while (url) {
     console.log(`拉取第 ${page} 页...`);
-    const res = await githubFetch(url);
+    const res = await githubRequest(url);
     const items = await res.json();
 
     for (const item of items) {
-      // list endpoint also returns PRs
       if (item.pull_request) continue;
       if (!TITLE_FILTER.test(item.title || '')) continue;
 
@@ -207,7 +222,6 @@ async function fetchSourceIssues({ since } = {}) {
     url = parseLinkNext(res.headers.get('link'));
     page += 1;
 
-    // Incremental mode: stop early when we hit known issues (optional safety)
     if (page > 200) {
       console.warn('分页超过 200，停止以防异常');
       break;
@@ -235,9 +249,33 @@ async function ensureUserDataFiles() {
 function dedupeByIssueNumber(issues) {
   const map = new Map();
   for (const issue of issues) {
-    map.set(String(issue.issueNumber), issue);
+    map.set(String(issue.issueNumber), {
+      ...issue,
+      issueNumber: String(issue.issueNumber),
+      body: issue.body || issue.content || '',
+      html: issue.html || '',
+    });
   }
   return [...map.values()];
+}
+
+async function attachHtml(issues, { force = false } = {}) {
+  const need = issues.filter((i) => force || !i.html);
+  console.log(`渲染 HTML: ${need.length} 条`);
+  for (let i = 0; i < need.length; i++) {
+    const issue = need[i];
+    try {
+      issue.html = await renderMarkdownHtml(issue.body || '');
+      if ((i + 1) % 10 === 0 || i === need.length - 1) {
+        console.log(`  HTML ${i + 1}/${need.length}`);
+      }
+      // 轻微节流，降低 secondary rate limit
+      await new Promise((r) => setTimeout(r, 200));
+    } catch (err) {
+      console.warn(`渲染失败 #${issue.issueNumber}:`, err.message);
+      issue.html = issue.html || '';
+    }
+  }
 }
 
 async function main() {
@@ -247,9 +285,8 @@ async function main() {
     const { issues: existing } = await loadAllIssues();
     const base = dedupeByIssueNumber(existing);
     const existingIds = new Set(base.map((i) => String(i.issueNumber)));
-    console.log(`已有 ${base.length} 条`);
+    console.log(`已有 ${base.length} 条（含 html ${base.filter((i) => i.html).length}）`);
 
-    // 增量回溯 14 天，降低 Actions 停更后漏抓风险
     let since;
     if (base.length) {
       const newest = base.reduce((a, b) =>
@@ -264,7 +301,7 @@ async function main() {
     }
 
     if (!getToken()) {
-      console.warn('未设置 GITHUB_TOKEN：未认证限额 60次/小时，建议在 Actions 或本地配置 token');
+      console.warn('未设置 GITHUB_TOKEN：未认证限额较低，建议配置 token');
     }
 
     const fetched = await fetchSourceIssues({ since });
@@ -274,14 +311,32 @@ async function main() {
     console.log(`其中新增 ${uniqueNew.length} 条`);
 
     const fetchedMap = new Map(fetched.map((i) => [String(i.issueNumber), i]));
+    const toRender = [];
+
     const merged = base.map((old) => {
       const fresh = fetchedMap.get(String(old.issueNumber));
-      return fresh ? { ...old, ...fresh } : old;
+      if (!fresh) return old;
+      const bodyChanged = (fresh.body || '') !== (old.body || '');
+      const next = {
+        ...old,
+        title: fresh.title,
+        datetime: fresh.datetime || old.datetime,
+        author: fresh.author || old.author,
+        body: fresh.body,
+        // 正文没变则保留原 html，避免被空字段冲掉
+        html: bodyChanged ? '' : old.html || '',
+      };
+      if (bodyChanged || !next.html) toRender.push(next);
+      return next;
     });
 
     for (const issue of uniqueNew) {
-      merged.push(issue);
+      const row = { ...issue, html: '' };
+      merged.push(row);
+      toRender.push(row);
     }
+
+    await attachHtml(toRender);
 
     const finalList = dedupeByIssueNumber(merged);
     finalList.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));

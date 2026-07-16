@@ -47,6 +47,7 @@ const loaded = ref(false);
 const pendingSync = ref(false);
 
 let syncTimer = null;
+let syncLock = null;
 
 function snapshot() {
   return { ratings: { ...ratings.value }, favorites: { ...favorites.value } };
@@ -61,7 +62,6 @@ function persistLocal() {
 export function useUserData() {
   async function init() {
     const remote = await loadUserData();
-    // 有未同步的本地脏数据时，以本地完整快照为准（才能表达「取消收藏/清评分」）
     if (isDirty()) {
       const local = readLocal();
       ratings.value = local.ratings;
@@ -141,29 +141,37 @@ export function useUserData() {
       syncError.value = '未配置 Token';
       return;
     }
-    syncing.value = true;
-    syncError.value = '';
-    try {
-      const payload = snapshot();
-      await putJsonFile(
-        ALLOWED_USER_DATA_PATH,
-        payload,
-        `chore: update user data (${new Date().toISOString().slice(0, 10)})`
-      );
-      writeLocal(payload);
-      clearDirty();
-      pendingSync.value = false;
-      syncHint.value = '已同步到仓库';
-      setTimeout(() => {
-        if (syncHint.value === '已同步到仓库') syncHint.value = '';
-      }, 2500);
-    } catch (err) {
-      syncError.value = err.message || String(err);
-      syncHint.value = '';
-      throw err;
-    } finally {
-      syncing.value = false;
-    }
+    // 串行化，避免连续评分打出多个 PUT 互相 409
+    if (syncLock) return syncLock;
+
+    syncLock = (async () => {
+      syncing.value = true;
+      syncError.value = '';
+      try {
+        const payload = snapshot();
+        await putJsonFile(
+          ALLOWED_USER_DATA_PATH,
+          payload,
+          `chore: update user data (${new Date().toISOString().slice(0, 10)})`
+        );
+        writeLocal(payload);
+        clearDirty();
+        pendingSync.value = false;
+        syncHint.value = '已同步到仓库';
+        setTimeout(() => {
+          if (syncHint.value === '已同步到仓库') syncHint.value = '';
+        }, 2500);
+      } catch (err) {
+        syncError.value = err.message || String(err);
+        syncHint.value = '';
+        throw err;
+      } finally {
+        syncing.value = false;
+        syncLock = null;
+      }
+    })();
+
+    return syncLock;
   }
 
   const favoriteIds = computed(() =>

@@ -22,7 +22,6 @@ function fromBase64(b64) {
   return new TextDecoder().decode(bytes);
 }
 
-/** 只允许写回固定路径，避免 BYOK 误覆盖仓库其它文件 */
 export function resolveUserDataPath(path) {
   const normalized = String(path || '')
     .trim()
@@ -32,6 +31,11 @@ export function resolveUserDataPath(path) {
     throw new Error(`仅允许写入 ${ALLOWED_USER_DATA_PATH}`);
   }
   return ALLOWED_USER_DATA_PATH;
+}
+
+function parseShaFromConflict(message) {
+  const m = String(message).match(/does not match ([a-f0-9]{40})/i);
+  return m ? m[1] : '';
 }
 
 async function api(path, { method = 'GET', body } = {}) {
@@ -55,7 +59,7 @@ async function api(path, { method = 'GET', body } = {}) {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GitHub API ${res.status}: ${text.slice(0, 200)}`);
+    throw new Error(`GitHub API ${res.status}: ${text.slice(0, 240)}`);
   }
 
   if (res.status === 204) return null;
@@ -64,23 +68,35 @@ async function api(path, { method = 'GET', body } = {}) {
 
 export async function getFile(path) {
   const settings = loadSettings();
-  const data = await api(`/contents/${path}?ref=${encodeURIComponent(settings.branch)}`);
+  // 加时间戳避免中间层缓存旧 sha
+  const data = await api(
+    `/contents/${path}?ref=${encodeURIComponent(settings.branch)}&_=${Date.now()}`
+  );
   return { sha: data.sha, content: fromBase64(data.content), path: data.path };
 }
 
+/**
+ * 更新 user.json。409 = 远端 sha 已变（常见于连续快速同步），
+ * 会重新 GET sha / 从错误信息解析 sha 后重试。
+ */
 export async function putJsonFile(path, data, message) {
   const safePath = resolveUserDataPath(path);
   const settings = loadSettings();
   const content = `${JSON.stringify(data, null, 2)}\n`;
   const encoded = toBase64(content);
+  let hintSha = '';
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    let sha;
-    try {
-      const existing = await getFile(safePath);
-      sha = existing.sha;
-    } catch (err) {
-      if (!String(err.message).includes('404')) throw err;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    let sha = hintSha;
+    hintSha = '';
+
+    if (!sha) {
+      try {
+        const existing = await getFile(safePath);
+        sha = existing.sha;
+      } catch (err) {
+        if (!String(err.message).includes('404')) throw err;
+      }
     }
 
     try {
@@ -94,8 +110,11 @@ export async function putJsonFile(path, data, message) {
         },
       });
     } catch (err) {
-      if (String(err.message).includes('409') && attempt < 3) {
-        await new Promise((r) => setTimeout(r, 300 * attempt));
+      const msg = String(err.message);
+      const conflictSha = parseShaFromConflict(msg);
+      if ((msg.includes('409') || conflictSha) && attempt < 5) {
+        hintSha = conflictSha;
+        await new Promise((r) => setTimeout(r, 250 * attempt));
         continue;
       }
       throw err;

@@ -20,7 +20,7 @@
 | 路径 | 说明 |
 |------|------|
 | `public/data/issues/manifest.json` | 分片索引 |
-| `public/data/issues/*.json` | Issue 列表（markdown `body`） |
+| `public/data/issues/*.json` | Issue 列表（含 `body` markdown + `html` 完整渲染结构，保留图片等） |
 | `public/data/user.json` | `{ "ratings": { "1234": 5 }, "favorites": { "1234": true } }` |
 
 ## BYOK / localStorage
