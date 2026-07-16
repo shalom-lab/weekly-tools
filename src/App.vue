@@ -462,26 +462,27 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 0.75rem 1.5rem;
   display: flex;
-  align-items: center;
-  gap: 1.25rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
   min-height: var(--nav-height);
   box-sizing: border-box;
-  flex-wrap: wrap;
 }
 
 .title-section {
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   gap: 0.3rem;
   flex: 1 1 auto;
   min-width: 0;
-  max-width: min(720px, 55%);
 }
 
 .site-title {
   margin: 0;
   font-size: 1.35rem;
   color: var(--primary-color);
+  line-height: 1.2;
 }
 
 .title-subrow {
@@ -489,6 +490,7 @@ body {
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+  min-height: 36px;
 }
 
 .repo-links {
@@ -498,6 +500,7 @@ body {
   font-size: 0.8rem;
   color: #666;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .repo-link {
@@ -517,14 +520,15 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-width: 0;
-  flex: 0 1 420px;
-  justify-content: flex-end;
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 36px;
 }
 
 .status-box {
   flex: 1 1 auto;
-  min-width: 160px;
+  min-width: 140px;
+  max-width: 360px;
   height: 22px;
   box-sizing: border-box;
   padding: 0 0.55rem;
@@ -583,14 +587,15 @@ body {
 }
 
 .search-bar {
-  flex: 1;
+  width: 280px;
+  max-width: 36vw;
   min-width: 160px;
-  max-width: 480px;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.6rem 0.85rem;
+  height: 36px;
+  padding: 0 0.85rem;
   font-size: 0.95rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -1011,8 +1016,8 @@ body {
 
   .nav-actions {
     width: 100%;
-    flex: 1 1 auto;
     margin-left: 0;
+    justify-content: flex-end;
   }
 
   .status-box {
@@ -1021,7 +1026,9 @@ body {
   }
 
   .search-bar {
+    width: auto;
     max-width: none;
+    flex: 1;
   }
 
   .main-content {
