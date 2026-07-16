@@ -84,7 +84,10 @@
             v-for="issue in paginatedIssues"
             :key="issue.issueNumber"
             class="issue-item"
-            :class="{ active: selectedIssue?.issueNumber === issue.issueNumber }"
+            :class="{
+              active: selectedIssue?.issueNumber === issue.issueNumber,
+              favorited: user.isFavorite(issue.issueNumber),
+            }"
             @click="selectIssue(issue)"
           >
             <h3 class="issue-title">
@@ -600,9 +603,22 @@ body {
   background-color: var(--hover-color);
 }
 
+.issue-item.favorited {
+  background-color: #fff5f7;
+}
+
+.issue-item.favorited:hover {
+  background-color: #ffecf0;
+}
+
 .issue-item.active {
   background-color: var(--active-color);
   border-left: 3px solid var(--primary-color);
+}
+
+.issue-item.favorited.active {
+  background-color: #ffe4ea;
+  border-left-color: #e57373;
 }
 
 .issue-title {
