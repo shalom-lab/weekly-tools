@@ -180,8 +180,6 @@
               :disabled="user.syncing.value"
               @update:model-value="onFavorite"
             />
-          </div>
-          <div class="detail-actions">
             <StarRating
               :model-value="user.getRating(selectedIssue.issueNumber)"
               :disabled="user.syncing.value"
@@ -761,22 +759,19 @@ body {
 }
 
 .detail-meta {
-  display: grid;
-  grid-template-columns: auto minmax(4rem, max-content) auto;
-  gap: 0.75rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 0.65rem 1rem;
   margin-top: 0.5rem;
   font-size: 0.85rem;
   color: #666;
-  justify-content: start;
 }
 
-.detail-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.65rem;
-  flex-wrap: wrap;
+.detail-meta .author-link {
+  width: auto;
+  max-width: none;
+  justify-self: auto;
 }
 
 .empty-state {
