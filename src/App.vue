@@ -380,6 +380,50 @@ function selectIssue(issue) {
     setTimeout(() => {
       document.querySelector('.issue-detail')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
+  } else {
+    // 桌面：确保左侧列表里的选中项可见
+    requestAnimationFrame(() => {
+      document
+        .querySelector('.issue-item.active')
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }
+}
+
+function moveSelection(delta) {
+  if (showSettings.value) return;
+  const list = filteredIssues.value;
+  if (!list.length) return;
+
+  let idx = selectedIssue.value
+    ? list.findIndex((i) => String(i.issueNumber) === String(selectedIssue.value.issueNumber))
+    : -1;
+
+  if (idx < 0) {
+    idx = delta > 0 ? 0 : list.length - 1;
+  } else {
+    idx = Math.min(list.length - 1, Math.max(0, idx + delta));
+  }
+
+  const next = list[idx];
+  if (!next) return;
+
+  const page = Math.floor(idx / pageSize.value) + 1;
+  if (page !== currentPage.value) currentPage.value = page;
+  selectIssue(next);
+}
+
+function onKeydown(e) {
+  if (showSettings.value) return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    moveSelection(1);
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    moveSelection(-1);
   }
 }
 
@@ -412,6 +456,7 @@ function formatDate(datetime) {
 onMounted(async () => {
   calculatePageSize();
   window.addEventListener('resize', calculatePageSize);
+  window.addEventListener('keydown', onKeydown);
   try {
     const [{ issues: list }] = await Promise.all([loadIssues(), user.init()]);
     issues.value = list;
@@ -422,6 +467,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', calculatePageSize);
+  window.removeEventListener('keydown', onKeydown);
   if (searchTimer) clearTimeout(searchTimer);
 });
 </script>
