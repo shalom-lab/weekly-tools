@@ -24,28 +24,45 @@
         </div>
       </div>
 
-      <div class="tabs" role="tablist">
+      <div class="nav-actions">
+        <div v-if="!showSettings" class="search-bar">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索标题或内容..."
+            class="search-input"
+          />
+        </div>
         <button
-          v-for="tab in tabs"
-          :key="tab.id"
           type="button"
-          role="tab"
-          class="tab"
-          :class="{ active: activeTab === tab.id }"
-          :aria-selected="activeTab === tab.id"
-          @click="activeTab = tab.id"
+          class="icon-btn"
+          :class="{ active: showSettings }"
+          title="设置"
+          aria-label="设置"
+          @click="toggleSettings"
         >
-          {{ tab.label }}
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.5a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.39 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"
+            />
+          </svg>
         </button>
-      </div>
-
-      <div v-if="activeTab !== 'settings'" class="search-bar">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="搜索标题或内容..."
-          class="search-input"
-        />
+        <a
+          href="https://github.com/shalom-lab/weekly-tools"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="icon-btn"
+          title="GitHub"
+          aria-label="GitHub 仓库"
+        >
+          <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+            />
+          </svg>
+        </a>
       </div>
     </nav>
 
@@ -54,7 +71,7 @@
     <div v-else-if="user.syncing.value" class="banner">正在同步到仓库…</div>
     <div v-else-if="user.syncHint.value" class="banner soft">{{ user.syncHint.value }}</div>
 
-    <SettingsPanel v-if="activeTab === 'settings'" />
+    <SettingsPanel v-if="showSettings" />
 
     <div v-else class="main-content">
       <div class="issue-list">
@@ -72,7 +89,7 @@
           <button
             type="button"
             class="filter-chip"
-            :class="{ active: favOnly || activeTab === 'favorites' }"
+            :class="{ active: favOnly }"
             @click="toggleFavFilter"
           >
             已收藏
@@ -115,7 +132,7 @@
             </div>
           </div>
           <div v-if="!paginatedIssues.length" class="list-empty">
-            {{ showFavoritesOnly ? '没有符合条件的收藏' : '没有匹配结果' }}
+            {{ favOnly ? '没有符合条件的收藏' : '没有匹配结果' }}
           </div>
         </div>
 
@@ -196,13 +213,7 @@ import SettingsPanel from './components/SettingsPanel.vue';
 
 marked.setOptions({ breaks: true, gfm: true });
 
-const tabs = [
-  { id: 'browse', label: '浏览' },
-  { id: 'favorites', label: '收藏' },
-  { id: 'settings', label: '设置' },
-];
-
-const activeTab = ref('browse');
+const showSettings = ref(false);
 const searchQuery = ref('');
 const debouncedQuery = ref('');
 const selectedIssue = ref(null);
@@ -223,9 +234,10 @@ const timeFilters = [
   { id: '180d', label: '近半年' },
 ];
 
-const showFavoritesOnly = computed(
-  () => favOnly.value || activeTab.value === 'favorites'
-);
+function toggleSettings() {
+  showSettings.value = !showSettings.value;
+  if (showSettings.value) selectedIssue.value = null;
+}
 
 function toggleTimeFilter(id) {
   timeFilter.value = timeFilter.value === id ? '' : id;
@@ -233,12 +245,7 @@ function toggleTimeFilter(id) {
 }
 
 function toggleFavFilter() {
-  if (activeTab.value === 'favorites') {
-    activeTab.value = 'browse';
-    favOnly.value = false;
-  } else {
-    favOnly.value = !favOnly.value;
-  }
+  favOnly.value = !favOnly.value;
   currentPage.value = 1;
 }
 
@@ -254,7 +261,7 @@ function withinTimeRange(datetime, filterId) {
 const filteredIssues = computed(() => {
   let list = issues.value;
 
-  if (showFavoritesOnly.value) {
+  if (favOnly.value) {
     list = list.filter((i) => user.isFavorite(i.issueNumber));
   }
 
@@ -300,12 +307,6 @@ watch(searchQuery, (val) => {
     debouncedQuery.value = val;
     currentPage.value = 1;
   }, 200);
-});
-
-watch(activeTab, (tab) => {
-  currentPage.value = 1;
-  selectedIssue.value = null;
-  if (tab === 'favorites') favOnly.value = false;
 });
 
 watch([timeFilter, favOnly], () => {
@@ -455,38 +456,20 @@ body {
   color: #ccc;
 }
 
-.tabs {
+.nav-actions {
   display: flex;
-  gap: 0.25rem;
-  background: #f3f3f3;
-  padding: 3px;
-  border-radius: 8px;
-}
-
-.tab {
-  border: none;
-  background: transparent;
-  padding: 0.45rem 0.85rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: #555;
-  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-}
-
-.tab.active {
-  background: #fff;
-  color: var(--primary-color);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  gap: 0.5rem;
+  margin-left: auto;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .search-bar {
   flex: 1;
-  min-width: 180px;
+  min-width: 160px;
   max-width: 480px;
-  margin-left: auto;
 }
 
 .search-input {
@@ -502,6 +485,32 @@ body {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.icon-btn:hover {
+  background: #f0f0f0;
+  color: #111;
+}
+
+.icon-btn.active {
+  background: var(--active-color);
+  color: var(--primary-color);
 }
 
 .banner {
@@ -664,6 +673,10 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  /* 只占文字宽度，名字与星星之间的空白点卡片 */
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
 }
 
 .author-link:hover {
@@ -842,13 +855,13 @@ body {
     align-items: center;
   }
 
-  .tabs {
-    justify-content: center;
+  .nav-actions {
+    width: 100%;
+    margin-left: 0;
   }
 
   .search-bar {
     max-width: none;
-    margin-left: 0;
   }
 
   .main-content {
