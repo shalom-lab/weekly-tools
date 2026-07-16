@@ -60,10 +60,8 @@ function persistLocal() {
 }
 
 /**
- * 收藏规则：
- * - favorites[id] === true  → 明确收藏
- * - favorites[id] === false → 单独取消（即使有评分也不算收藏）
- * - 未设置时：评分 >= 1 默认视为已收藏
+ * 收藏页 / 已收藏筛选：
+ * 评分不为 0，或 favorites[id] === true
  */
 export function useUserData() {
   async function init() {
@@ -97,19 +95,15 @@ export function useUserData() {
 
   function isFavorite(issueNumber) {
     const id = String(issueNumber);
-    const flag = favorites.value[id];
-    if (flag === false) return false;
-    if (flag === true) return true;
-    return getRating(id) >= 1;
+    return getRating(id) !== 0 || favorites.value[id] === true;
   }
 
   async function setRating(issueNumber, stars) {
     const id = String(issueNumber);
-    const next = { ...ratings.value };
-    if (!stars) delete next[id];
-    else next[id] = Math.min(5, Math.max(0, Number(stars) || 0));
-    ratings.value = next;
-    // 打分 >=1 且未单独取消过 → 不必写 favorites；取消收藏用 false 覆盖
+    const nextRatings = { ...ratings.value };
+    if (!stars) delete nextRatings[id];
+    else nextRatings[id] = Math.min(5, Math.max(0, Number(stars) || 0));
+    ratings.value = nextRatings;
     persistLocal();
     if (!hasToken()) {
       syncHint.value = '已保存在本机；到「设置」填写 Token 可同步到仓库';
@@ -121,10 +115,17 @@ export function useUserData() {
 
   async function setFavorite(issueNumber, value) {
     const id = String(issueNumber);
-    const next = { ...favorites.value };
-    // true / false 都显式写入，false = 单独取消（覆盖「有评分即收藏」）
-    next[id] = Boolean(value);
-    favorites.value = next;
+    const nextFav = { ...favorites.value };
+    const nextRatings = { ...ratings.value };
+    if (value) {
+      nextFav[id] = true;
+    } else {
+      // 取消收藏：去掉 favorite，并清零评分，否则评分≠0 仍会出现在收藏页
+      delete nextFav[id];
+      delete nextRatings[id];
+      ratings.value = nextRatings;
+    }
+    favorites.value = nextFav;
     persistLocal();
     if (!hasToken()) {
       syncHint.value = '已保存在本机；到「设置」填写 Token 可同步到仓库';
@@ -195,11 +196,10 @@ export function useUserData() {
   const favoriteIds = computed(() => {
     const ids = new Set();
     for (const id of Object.keys(ratings.value)) {
-      if (isFavorite(id)) ids.add(id);
+      if (getRating(id) !== 0) ids.add(id);
     }
     for (const [id, flag] of Object.entries(favorites.value)) {
       if (flag === true) ids.add(id);
-      if (flag === false) ids.delete(id);
     }
     return [...ids];
   });
