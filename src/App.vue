@@ -30,14 +30,6 @@
       </div>
 
       <div class="nav-actions">
-        <div v-if="!showSettings" class="search-bar">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="搜索标题或内容..."
-            class="search-input"
-          />
-        </div>
         <button
           type="button"
           class="sync-remote-btn"
@@ -48,6 +40,14 @@
         >
           {{ user.syncing.value ? '同步中…' : '同步到远程' }}
         </button>
+        <div v-if="!showSettings" class="search-bar">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索标题或内容..."
+            class="search-input"
+          />
+        </div>
         <button
           type="button"
           class="icon-btn"

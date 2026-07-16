@@ -1,10 +1,22 @@
 const BASE = import.meta.env.BASE_URL || '/';
 
-async function fetchJson(relPath) {
-  const url = `${BASE}${relPath.replace(/^\//, '')}`;
-  const res = await fetch(url);
+async function fetchJson(relPath, { cacheBust = false } = {}) {
+  const path = relPath.replace(/^\//, '');
+  const url = `${BASE}${path}${cacheBust ? `${path.includes('?') ? '&' : '?'}_=${Date.now()}` : ''}`;
+  const res = await fetch(url, cacheBust ? { cache: 'no-store' } : undefined);
   if (!res.ok) throw new Error(`加载失败 ${url}: ${res.status}`);
   return res.json();
+}
+
+function normalizeUserPayload(data) {
+  return {
+    ratings: data?.ratings && typeof data.ratings === 'object' ? data.ratings : {},
+    favorites:
+      data?.favorites && typeof data.favorites === 'object' ? data.favorites : {},
+    categories_all: Array.isArray(data?.categories_all) ? data.categories_all : [],
+    category:
+      data?.category && typeof data.category === 'object' ? data.category : {},
+  };
 }
 
 export async function loadIssues() {
@@ -22,21 +34,14 @@ export async function loadIssues() {
   return { manifest, issues };
 }
 
+/** 静态站点上的 user.json（可能落后于刚 push 的仓库，仅作无 Token 兜底） */
 export async function loadUserData() {
   try {
-    const data = await fetchJson('data/user.json');
-    return {
-      ratings: data.ratings && typeof data.ratings === 'object' ? data.ratings : {},
-      favorites: data.favorites && typeof data.favorites === 'object' ? data.favorites : {},
-      categories_all: Array.isArray(data.categories_all) ? data.categories_all : [],
-      category: data.category && typeof data.category === 'object' ? data.category : {},
-    };
+    const data = await fetchJson('data/user.json', { cacheBust: true });
+    return normalizeUserPayload(data);
   } catch {
-    return {
-      ratings: {},
-      favorites: {},
-      categories_all: [],
-      category: {},
-    };
+    return normalizeUserPayload({});
   }
 }
+
+export { normalizeUserPayload };

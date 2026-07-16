@@ -1,6 +1,11 @@
 import { ref, computed } from 'vue';
 import { loadUserData } from './data.js';
-import { putJsonFile, hasToken, ALLOWED_USER_DATA_PATH } from './github.js';
+import {
+  putJsonFile,
+  pullUserDataFromGithub,
+  hasToken,
+  ALLOWED_USER_DATA_PATH,
+} from './github.js';
 
 const LOCAL_KEY = 'weekly-tools-user-local';
 const DIRTY_KEY = 'weekly-tools-user-dirty';
@@ -38,22 +43,26 @@ function normalizeCategoryMap(map) {
   return out;
 }
 
+function normalizePayload(data) {
+  return {
+    ratings: data?.ratings && typeof data.ratings === 'object' ? data.ratings : {},
+    favorites:
+      data?.favorites && typeof data.favorites === 'object' ? data.favorites : {},
+    categories_all: normalizeCategoriesAll(data?.categories_all),
+    category: normalizeCategoryMap(data?.category),
+  };
+}
+
 function readLocal() {
   try {
-    const data = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}');
-    return {
-      ratings: data.ratings && typeof data.ratings === 'object' ? data.ratings : {},
-      favorites: data.favorites && typeof data.favorites === 'object' ? data.favorites : {},
-      categories_all: normalizeCategoriesAll(data.categories_all),
-      category: normalizeCategoryMap(data.category),
-    };
+    return normalizePayload(JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}'));
   } catch {
     return emptyPayload();
   }
 }
 
 function writeLocal(payload) {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(normalizePayload(payload)));
 }
 
 function isDirty() {
@@ -92,29 +101,54 @@ function snapshot() {
 }
 
 function applyPayload(payload) {
-  ratings.value = payload.ratings || {};
-  favorites.value = payload.favorites || {};
-  categoriesAll.value = normalizeCategoriesAll(payload.categories_all);
-  category.value = normalizeCategoryMap(payload.category);
+  const n = normalizePayload(payload);
+  ratings.value = n.ratings;
+  favorites.value = n.favorites;
+  categoriesAll.value = n.categories_all;
+  category.value = n.category;
 }
 
 function persistLocal() {
   writeLocal(snapshot());
   markDirty();
   pendingSync.value = true;
-  syncHint.value = hasToken() ? '有未同步的本地改动' : '已保存在本机；配置 Token 后可同步';
+  syncHint.value = hasToken()
+    ? '有未同步的本地改动'
+    : '已保存在本机；配置 Token 后可同步';
+}
+
+/**
+ * 启动时 pull：有 Token 走 GitHub API（最新），否则静态 user.json（防缓存）。
+ * 若本地有未推送改动则保留本地，否则以远程覆盖本地。
+ */
+async function pullRemote() {
+  if (hasToken()) {
+    try {
+      const { payload } = await pullUserDataFromGithub();
+      return normalizePayload(payload);
+    } catch (err) {
+      // Token 无效或网络问题时退回静态文件，不阻断页面
+      console.warn('[userData] GitHub pull failed, fallback to static', err);
+    }
+  }
+  return normalizePayload(await loadUserData());
 }
 
 export function useUserData() {
   async function init() {
-    const remote = await loadUserData();
-    if (isDirty()) {
+    const remote = await pullRemote();
+    const dirty = isDirty();
+
+    if (dirty) {
+      // 本会话未推送的改动优先；远程仅作对照，不合并
       applyPayload(readLocal());
       pendingSync.value = true;
       syncHint.value = hasToken() ? '有未同步的本地改动' : '';
     } else {
+      // 干净启动：远程为准，刷新本地缓存
       applyPayload(remote);
-      writeLocal(snapshot());
+      writeLocal(remote);
+      clearDirty();
       pendingSync.value = false;
       syncHint.value = '';
     }
@@ -165,7 +199,6 @@ export function useUserData() {
 
   function setCategoriesAll(list) {
     categoriesAll.value = normalizeCategoriesAll(list);
-    // 清理已删除类别在各 issue 上的引用
     const allow = new Set(categoriesAll.value);
     const nextMap = {};
     for (const [id, arr] of Object.entries(category.value)) {
@@ -193,6 +226,7 @@ export function useUserData() {
     persistLocal();
   }
 
+  /** 本地快照整份覆盖远程（force），不做字段合并 */
   async function syncToRepo() {
     if (!hasToken()) {
       syncError.value = '未配置 Token';
@@ -209,8 +243,6 @@ export function useUserData() {
       syncError.value = '';
       try {
         const payload = snapshot();
-        // 手动同步：本地快照为准。不能用 {...remote, ...local}，
-        // 否则取消收藏/清评分删掉的键会被远端旧数据加回来，再 apply 回 UI。
         const { payload: written } = await putJsonFile(
           ALLOWED_USER_DATA_PATH,
           payload,
