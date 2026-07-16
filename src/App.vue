@@ -663,17 +663,10 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.15rem;
-  border-radius: 999px;
-  background: #f5f5f5;
 }
 
 .filter-group.star-filter {
   margin-left: auto;
-  background: transparent;
-  padding: 0.15rem 0.35rem;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
 }
 
 .star-filter-btn {
@@ -696,7 +689,7 @@ body {
 }
 
 .filter-chip {
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
   background: #fff;
   color: #555;
   border-radius: 999px;
