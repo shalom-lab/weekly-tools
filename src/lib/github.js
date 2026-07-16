@@ -53,7 +53,6 @@ async function api(path, { method = 'GET', body } = {}) {
       Authorization: `Bearer ${token}`,
       'X-GitHub-Api-Version': '2022-11-28',
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache',
     },
     body: body ? JSON.stringify(body) : undefined,
   });
