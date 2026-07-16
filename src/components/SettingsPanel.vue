@@ -26,15 +26,16 @@
       </label>
 
       <div class="field-grid">
-        <label class="field">
-          <span>Owner</span>
-          <input v-model="form.repoOwner" type="text" />
+        <label class="field repo-field">
+          <span>仓库</span>
+          <input
+            v-model="form.repo"
+            type="text"
+            placeholder="owner/repo"
+            spellcheck="false"
+          />
         </label>
-        <label class="field">
-          <span>Repo</span>
-          <input v-model="form.repoName" type="text" />
-        </label>
-        <label class="field">
+        <label class="field branch-field">
           <span>Branch</span>
           <input v-model="form.branch" type="text" />
         </label>
@@ -82,8 +83,7 @@ import { useUserData } from '../lib/userData.js';
 
 const form = reactive({
   githubToken: '',
-  repoOwner: '',
-  repoName: '',
+  repo: '',
   branch: '',
 });
 
@@ -106,6 +106,23 @@ function refreshTokenStatus() {
   tokenDetected.value = hasToken();
 }
 
+function parseRepo(raw) {
+  const cleaned = String(raw || '')
+    .trim()
+    .replace(/^https?:\/\/github\.com\//i, '')
+    .replace(/\.git$/i, '')
+    .replace(/\/+$/, '');
+  const parts = cleaned.split('/').filter(Boolean);
+  if (parts.length < 2) {
+    return { ok: false, error: '仓库格式应为 owner/repo' };
+  }
+  return {
+    ok: true,
+    repoOwner: parts[0],
+    repoName: parts.slice(1).join('/'),
+  };
+}
+
 watch(
   () => user.categoriesAll.value,
   (list) => {
@@ -117,12 +134,27 @@ watch(
 );
 
 onMounted(() => {
-  Object.assign(form, loadSettings());
+  const s = loadSettings();
+  form.githubToken = s.githubToken || '';
+  form.branch = s.branch || 'main';
+  form.repo = [s.repoOwner, s.repoName].filter(Boolean).join('/');
   refreshTokenStatus();
 });
 
 function save() {
-  saveSettings({ ...form });
+  const parsed = parseRepo(form.repo);
+  if (!parsed.ok) {
+    statusType.value = 'err';
+    status.value = parsed.error;
+    return;
+  }
+  form.repo = `${parsed.repoOwner}/${parsed.repoName}`;
+  saveSettings({
+    githubToken: form.githubToken,
+    repoOwner: parsed.repoOwner,
+    repoName: parsed.repoName,
+    branch: form.branch,
+  });
   refreshTokenStatus();
   statusType.value = 'ok';
   status.value = '设置已保存';
@@ -220,8 +252,19 @@ function saveCategories() {
 
 .field-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: minmax(0, 1fr) 7.5rem;
   gap: 0.75rem;
+  align-items: start;
+}
+
+.field-grid .field {
+  margin-bottom: 0.85rem;
+  min-width: 0;
+}
+
+.field-grid .field input {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .field input,
