@@ -24,6 +24,10 @@
         </div>
       </div>
 
+      <div class="status-box" :class="statusTone" :title="statusMessage">
+        <span class="status-text">{{ statusMessage }}</span>
+      </div>
+
       <div class="nav-actions">
         <div v-if="!showSettings" class="search-bar">
           <input
@@ -65,11 +69,6 @@
         </a>
       </div>
     </nav>
-
-    <div v-if="loadError" class="banner err">{{ loadError }}</div>
-    <div v-else-if="user.syncError.value" class="banner warn">{{ user.syncError.value }}</div>
-    <div v-else-if="user.syncing.value" class="banner">正在同步到仓库…</div>
-    <div v-else-if="user.syncHint.value" class="banner soft">{{ user.syncHint.value }}</div>
 
     <SettingsPanel v-if="showSettings" />
 
@@ -226,6 +225,22 @@ const favOnly = ref(false);
 const user = useUserData();
 
 let searchTimer = null;
+
+const statusMessage = computed(() => {
+  if (loadError.value) return loadError.value;
+  if (user.syncError.value) return user.syncError.value;
+  if (user.syncing.value) return '正在同步到仓库…';
+  if (user.syncHint.value) return user.syncHint.value;
+  return '';
+});
+
+const statusTone = computed(() => {
+  if (loadError.value) return 'err';
+  if (user.syncError.value) return 'warn';
+  if (user.syncing.value) return 'info';
+  if (user.syncHint.value) return 'soft';
+  return '';
+});
 
 const timeFilters = [
   { id: '7d', label: '近一周' },
@@ -460,10 +475,71 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-left: auto;
   min-width: 0;
   flex: 1;
   justify-content: flex-end;
+}
+
+.status-box {
+  flex: 0 1 220px;
+  min-width: 120px;
+  max-width: 280px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 0.75rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #f7f7f7;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.status-text {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  min-height: 1em;
+}
+
+.status-box.info {
+  background: #e3f2fd;
+  border-color: #bbdefb;
+}
+
+.status-box.info .status-text {
+  color: #1565c0;
+}
+
+.status-box.warn {
+  background: #fff8e1;
+  border-color: #ffe082;
+}
+
+.status-box.warn .status-text {
+  color: #f57f17;
+}
+
+.status-box.err {
+  background: #ffebee;
+  border-color: #ffcdd2;
+}
+
+.status-box.err .status-text {
+  color: #c62828;
+}
+
+.status-box.soft {
+  background: #f0f0f0;
+  border-color: #e6e6e6;
+}
+
+.status-box.soft .status-text {
+  color: #666;
 }
 
 .search-bar {
@@ -511,28 +587,6 @@ body {
 .icon-btn.active {
   background: var(--active-color);
   color: var(--primary-color);
-}
-
-.banner {
-  padding: 0.4rem 1.5rem;
-  font-size: 0.8rem;
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.banner.warn {
-  background: #fff8e1;
-  color: #f57f17;
-}
-
-.banner.err {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.banner.soft {
-  background: #f5f5f5;
-  color: #666;
 }
 
 .main-content {
@@ -880,6 +934,12 @@ body {
   .nav-actions {
     width: 100%;
     margin-left: 0;
+  }
+
+  .status-box {
+    flex: 1 1 100%;
+    max-width: none;
+    order: 3;
   }
 
   .search-bar {
