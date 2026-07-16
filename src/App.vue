@@ -107,28 +107,30 @@
             }"
             @click="selectIssue(issue)"
           >
-            <h3 class="issue-title">
-              <span v-if="user.isFavorite(issue.issueNumber)" class="mini-heart" title="已收藏">♥</span>
-              {{ issue.title }}
-            </h3>
-            <div class="issue-meta">
-              <a
-                :href="githubProfile(issue.author)"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="author-link"
-                @click.stop
-              >
-                {{ issue.author }}
-              </a>
-              <span class="mini-stars" aria-hidden="true">
-                {{
-                  user.getRating(issue.issueNumber)
-                    ? '★'.repeat(user.getRating(issue.issueNumber))
-                    : ''
-                }}
-              </span>
-              <span class="issue-date">{{ formatDate(issue.datetime) }}</span>
+            <span class="fav-slot" aria-hidden="true">
+              {{ user.isFavorite(issue.issueNumber) ? '♥' : '' }}
+            </span>
+            <div class="issue-body">
+              <h3 class="issue-title">{{ issue.title }}</h3>
+              <div class="issue-meta">
+                <a
+                  :href="githubProfile(issue.author)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="author-link"
+                  @click.stop
+                >
+                  {{ issue.author }}
+                </a>
+                <span class="mini-stars" aria-hidden="true">
+                  {{
+                    user.getRating(issue.issueNumber)
+                      ? '★'.repeat(user.getRating(issue.issueNumber))
+                      : ''
+                  }}
+                </span>
+                <span class="issue-date">{{ formatDate(issue.datetime) }}</span>
+              </div>
             </div>
           </div>
           <div v-if="!paginatedIssues.length" class="list-empty">
@@ -599,6 +601,10 @@ body {
 }
 
 .issue-item {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr;
+  gap: 0.45rem;
+  align-items: start;
   padding: 14px 12px;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
@@ -630,6 +636,18 @@ body {
   border-left-color: #e57373;
 }
 
+.fav-slot {
+  color: #e53935;
+  font-size: 0.85rem;
+  line-height: 22px;
+  text-align: center;
+  width: 1.1rem;
+}
+
+.issue-body {
+  min-width: 0;
+}
+
 .issue-title {
   margin: 0 0 8px 0;
   font-size: 15px;
@@ -638,12 +656,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.mini-heart {
-  color: #e53935;
-  margin-right: 0.25rem;
-  font-size: 0.85rem;
 }
 
 .mini-stars {
