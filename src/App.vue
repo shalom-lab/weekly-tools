@@ -3,29 +3,30 @@
     <nav class="nav-bar">
       <div class="title-section">
         <h1 class="site-title">Weekly Tools</h1>
-        <div class="repo-links">
-          <a
-            href="https://github.com/ruanyf/weekly/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="repo-link"
-          >
-            @ruanyf/weekly
-          </a>
-          <span class="divider">•</span>
-          <a
-            href="https://github.com/shalom-lab/weekly-tools"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="repo-link"
-          >
-            shalom-lab/weekly-tools
-          </a>
+        <div class="title-subrow">
+          <div class="repo-links">
+            <a
+              href="https://github.com/ruanyf/weekly/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="repo-link"
+            >
+              @ruanyf/weekly
+            </a>
+            <span class="divider">•</span>
+            <a
+              href="https://github.com/shalom-lab/weekly-tools"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="repo-link"
+            >
+              shalom-lab/weekly-tools
+            </a>
+          </div>
+          <div class="status-box" :class="statusTone" :title="statusMessage">
+            <span class="status-text">{{ statusMessage || '\u00a0' }}</span>
+          </div>
         </div>
-      </div>
-
-      <div class="status-box" :class="statusTone" :title="statusMessage">
-        <span class="status-text">{{ statusMessage }}</span>
       </div>
 
       <div class="nav-actions">
@@ -471,7 +472,10 @@ body {
 .title-section {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: min(720px, 55%);
 }
 
 .site-title {
@@ -480,12 +484,20 @@ body {
   color: var(--primary-color);
 }
 
+.title-subrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
 .repo-links {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
   color: #666;
+  flex-shrink: 0;
 }
 
 .repo-link {
@@ -506,18 +518,17 @@ body {
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 420px;
   justify-content: flex-end;
 }
 
 .status-box {
-  flex: 0 1 220px;
-  min-width: 120px;
-  max-width: 280px;
-  height: 36px;
+  flex: 1 1 auto;
+  min-width: 160px;
+  height: 22px;
   box-sizing: border-box;
-  padding: 0 0.75rem;
-  border-radius: 8px;
+  padding: 0 0.55rem;
+  border-radius: 6px;
   border: 1px solid transparent;
   background: #f7f7f7;
   display: flex;
@@ -526,14 +537,13 @@ body {
 }
 
 .status-text {
-  font-size: 0.75rem;
-  line-height: 1.3;
+  font-size: 0.72rem;
+  line-height: 1;
   color: #888;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
-  min-height: 1em;
 }
 
 .status-box.info {
@@ -995,19 +1005,26 @@ body {
   }
 
   .title-section {
-    text-align: center;
+    text-align: left;
+    align-items: stretch;
+    max-width: none;
+    width: 100%;
+  }
+
+  .title-subrow {
+    flex-wrap: wrap;
     align-items: center;
   }
 
   .nav-actions {
     width: 100%;
+    flex: 1 1 auto;
     margin-left: 0;
   }
 
   .status-box {
-    flex: 1 1 100%;
-    max-width: none;
-    order: 3;
+    min-width: 0;
+    flex: 1 1 12rem;
   }
 
   .search-bar {
