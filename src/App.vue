@@ -19,7 +19,7 @@
             rel="noopener noreferrer"
             class="repo-link"
           >
-            源码
+            shalom-lab/weekly-tools
           </a>
         </div>
       </div>
