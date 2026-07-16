@@ -95,19 +95,21 @@
               {{ issue.title }}
             </h3>
             <div class="issue-meta">
-              <span class="meta-left">
-                <a
-                  :href="githubProfile(issue.author)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="author-link"
-                  @click.stop
-                >
-                  {{ issue.author }}
-                </a>
-                <span v-if="user.getRating(issue.issueNumber)" class="mini-stars">
-                  {{ '★'.repeat(user.getRating(issue.issueNumber)) }}
-                </span>
+              <a
+                :href="githubProfile(issue.author)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="author-link"
+                @click.stop
+              >
+                {{ issue.author }}
+              </a>
+              <span class="mini-stars" aria-hidden="true">
+                {{
+                  user.getRating(issue.issueNumber)
+                    ? '★'.repeat(user.getRating(issue.issueNumber))
+                    : ''
+                }}
               </span>
               <span class="issue-date">{{ formatDate(issue.datetime) }}</span>
             </div>
@@ -640,31 +642,28 @@ body {
 .mini-stars {
   color: #f5a623;
   font-size: 0.75rem;
-  margin-left: 0.4rem;
   letter-spacing: -1px;
+  white-space: nowrap;
+  min-height: 1em;
 }
 
 .issue-meta {
   font-size: 13px;
   line-height: 18px;
   color: #666;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 1fr) 4.5rem auto;
+  gap: 0.5rem;
   align-items: center;
-}
-
-.meta-left {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  overflow: hidden;
 }
 
 .author-link {
   color: inherit;
   text-decoration: none;
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .author-link:hover {
@@ -672,8 +671,9 @@ body {
 }
 
 .issue-date {
-  flex-shrink: 0;
   color: #888;
+  white-space: nowrap;
+  justify-self: end;
 }
 
 .pagination {
