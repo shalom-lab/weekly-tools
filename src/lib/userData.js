@@ -209,19 +209,12 @@ export function useUserData() {
       syncError.value = '';
       try {
         const payload = snapshot();
+        // 手动同步：本地快照为准。不能用 {...remote, ...local}，
+        // 否则取消收藏/清评分删掉的键会被远端旧数据加回来，再 apply 回 UI。
         const { payload: written } = await putJsonFile(
           ALLOWED_USER_DATA_PATH,
           payload,
-          `chore: update user data (${new Date().toISOString().slice(0, 10)})`,
-          {
-            mergeRemote: (remote) => ({
-              ratings: { ...(remote.ratings || {}), ...payload.ratings },
-              favorites: { ...(remote.favorites || {}), ...payload.favorites },
-              // 类别以本地快照为准（含顺序与删除）
-              categories_all: payload.categories_all,
-              category: payload.category,
-            }),
-          }
+          `chore: update user data (${new Date().toISOString().slice(0, 10)})`
         );
         applyPayload(written);
         writeLocal(written);

@@ -76,13 +76,15 @@ export async function getFile(path) {
 
 /**
  * @param {object} [options]
- * @param {(remote: object) => object} [options.mergeRemote] 409 时先读远端再合并
+ * @param {(remote: object, local: object) => object} [options.mergeRemote]
+ *   仅在 409 冲突重试前调用；日常写入以传入的 data 为准，避免删除键被远端加回
  */
 export async function putJsonFile(path, data, message, options = {}) {
   const safePath = resolveUserDataPath(path);
   const settings = loadSettings();
   let payload = data;
   let hintSha = '';
+  let mergeOnConflict = false;
 
   for (let attempt = 1; attempt <= 6; attempt++) {
     let sha = hintSha;
@@ -102,9 +104,13 @@ export async function putJsonFile(path, data, message, options = {}) {
       sha = '';
     }
 
-    // 有远端且提供合并函数时，每次用最新远端与本地合并（本地字段优先）
-    if (remoteJson && typeof options.mergeRemote === 'function') {
-      payload = options.mergeRemote(remoteJson);
+    if (
+      mergeOnConflict &&
+      remoteJson &&
+      typeof options.mergeRemote === 'function'
+    ) {
+      payload = options.mergeRemote(remoteJson, data);
+      mergeOnConflict = false;
     }
 
     const content = `${JSON.stringify(payload, null, 2)}\n`;
@@ -126,6 +132,7 @@ export async function putJsonFile(path, data, message, options = {}) {
       const conflictSha = parseShaFromConflict(msg);
       if ((msg.includes('409') || conflictSha) && attempt < 6) {
         hintSha = '';
+        mergeOnConflict = typeof options.mergeRemote === 'function';
         await new Promise((r) => setTimeout(r, 400 * attempt));
         continue;
       }
