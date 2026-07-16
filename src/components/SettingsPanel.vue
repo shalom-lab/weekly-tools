@@ -49,7 +49,7 @@
 
     <section class="card">
       <h3>分类字典</h3>
-      <p class="section-hint">一行一个，顺序即展示顺序。保存后先写入本地，点顶部「同步到远程」提交仓库。</p>
+      <p class="section-hint">一行一个，顺序即展示顺序。保存后写本地；约 30 秒无感自动同步，也可点顶部按钮立刻提交。</p>
       <textarea
         v-model="categoriesText"
         class="category-textarea"
@@ -172,7 +172,7 @@ function saveCategories() {
   user.setCategoriesAll(previewTags.value);
   categoriesText.value = previewTags.value.join('\n');
   statusType.value = 'ok';
-  status.value = '分类已更新（本地）；点顶部「同步到远程」提交';
+  status.value = '分类已更新（本地）；约 30 秒后自动同步，或点顶部按钮立刻提交';
 }
 </script>
 

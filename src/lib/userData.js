@@ -9,6 +9,8 @@ import {
 
 const LOCAL_KEY = 'weekly-tools-user-local';
 const DIRTY_KEY = 'weekly-tools-user-dirty';
+/** 本地改动停止后多久自动推远程（无感）；手动按钮仍可立刻同步 */
+const AUTO_SYNC_IDLE_MS = 30_000;
 
 function emptyPayload() {
   return {
@@ -88,6 +90,9 @@ const loaded = ref(false);
 const pendingSync = ref(false);
 
 let syncLock = null;
+let autoSyncTimer = null;
+/** 由 useUserData 挂上，避免 queueAutoSync 早于 syncToRepo 定义 */
+let runAutoSync = null;
 
 function snapshot() {
   return {
@@ -108,13 +113,30 @@ function applyPayload(payload) {
   category.value = n.category;
 }
 
+function clearAutoSyncTimer() {
+  if (autoSyncTimer) {
+    clearTimeout(autoSyncTimer);
+    autoSyncTimer = null;
+  }
+}
+
+function queueAutoSync() {
+  if (!hasToken()) return;
+  clearAutoSyncTimer();
+  autoSyncTimer = setTimeout(() => {
+    autoSyncTimer = null;
+    if (typeof runAutoSync === 'function') runAutoSync();
+  }, AUTO_SYNC_IDLE_MS);
+}
+
 function persistLocal() {
   writeLocal(snapshot());
   markDirty();
   pendingSync.value = true;
   syncHint.value = hasToken()
-    ? '有未同步的本地改动'
+    ? '有未同步的本地改动（约 30 秒后自动同步）'
     : '已保存在本机；配置 Token 后可同步';
+  queueAutoSync();
 }
 
 /**
@@ -143,7 +165,10 @@ export function useUserData() {
       // 本会话未推送的改动优先；远程仅作对照，不合并
       applyPayload(readLocal());
       pendingSync.value = true;
-      syncHint.value = hasToken() ? '有未同步的本地改动' : '';
+      syncHint.value = hasToken()
+        ? '有未同步的本地改动（约 30 秒后自动同步）'
+        : '';
+      queueAutoSync();
     } else {
       // 干净启动：远程为准，刷新本地缓存
       applyPayload(remote);
@@ -227,7 +252,7 @@ export function useUserData() {
   }
 
   /** 本地快照整份覆盖远程（force），不做字段合并 */
-  async function syncToRepo() {
+  async function syncToRepo({ quiet = false } = {}) {
     if (!hasToken()) {
       syncError.value = '未配置 Token';
       throw new Error(syncError.value);
@@ -238,9 +263,11 @@ export function useUserData() {
     }
     if (syncLock) return syncLock;
 
+    clearAutoSyncTimer();
+
     syncLock = (async () => {
       syncing.value = true;
-      syncError.value = '';
+      if (!quiet) syncError.value = '';
       try {
         const payload = snapshot();
         const { payload: written } = await putJsonFile(
@@ -252,10 +279,13 @@ export function useUserData() {
         writeLocal(written);
         clearDirty();
         pendingSync.value = false;
-        syncHint.value = '已同步';
-        setTimeout(() => {
-          if (syncHint.value === '已同步') syncHint.value = '';
-        }, 2000);
+        syncError.value = '';
+        syncHint.value = quiet ? '' : '已同步';
+        if (!quiet) {
+          setTimeout(() => {
+            if (syncHint.value === '已同步') syncHint.value = '';
+          }, 2000);
+        }
       } catch (err) {
         syncError.value = err.message || String(err);
         syncHint.value = '';
@@ -279,6 +309,12 @@ export function useUserData() {
     }
     return [...ids];
   });
+
+  runAutoSync = () => {
+    syncToRepo({ quiet: true }).catch(() => {
+      queueAutoSync();
+    });
+  };
 
   return {
     ratings,
