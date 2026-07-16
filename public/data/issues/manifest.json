@@ -1,11 +1,13 @@
 {
   "version": 2,
   "chunks": [
+    "2024.json",
     "2025.json",
     "2026.json"
   ],
-  "count": 3552,
-  "updatedAt": "2026-07-16T02:59:15.669Z",
+  "count": 3550,
+  "withHtml": 3550,
   "hasHtml": true,
+  "updatedAt": "2026-07-16T18:58:01.260Z",
   "maxChunkBytes": 41943040
 }
