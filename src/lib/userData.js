@@ -4,10 +4,40 @@ import { putJsonFile, hasToken, ALLOWED_USER_DATA_PATH } from './github.js';
 
 const LOCAL_KEY = 'weekly-tools-user-local';
 const DIRTY_KEY = 'weekly-tools-user-dirty';
-const SYNC_DEBOUNCE_MS = 1800;
+/** 本地先写，短延迟后后台同步，避免频繁点选打爆 API */
+const SYNC_DEBOUNCE_MS = 2000;
 
 function emptyPayload() {
-  return { ratings: {}, favorites: {} };
+  return {
+    ratings: {},
+    favorites: {},
+    categories_all: [],
+    category: {},
+  };
+}
+
+function normalizeCategoriesAll(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    const name = String(raw || '').trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    out.push(name);
+  }
+  return out;
+}
+
+function normalizeCategoryMap(map) {
+  if (!map || typeof map !== 'object') return {};
+  const out = {};
+  for (const [id, arr] of Object.entries(map)) {
+    if (!Array.isArray(arr)) continue;
+    const names = normalizeCategoriesAll(arr);
+    if (names.length) out[String(id)] = names;
+  }
+  return out;
 }
 
 function readLocal() {
@@ -16,6 +46,8 @@ function readLocal() {
     return {
       ratings: data.ratings && typeof data.ratings === 'object' ? data.ratings : {},
       favorites: data.favorites && typeof data.favorites === 'object' ? data.favorites : {},
+      categories_all: normalizeCategoriesAll(data.categories_all),
+      category: normalizeCategoryMap(data.category),
     };
   } catch {
     return emptyPayload();
@@ -40,6 +72,8 @@ function clearDirty() {
 
 const ratings = ref({});
 const favorites = ref({});
+const categoriesAll = ref([]);
+const category = ref({});
 const syncing = ref(false);
 const syncError = ref('');
 const syncHint = ref('');
@@ -50,7 +84,21 @@ let syncTimer = null;
 let syncLock = null;
 
 function snapshot() {
-  return { ratings: { ...ratings.value }, favorites: { ...favorites.value } };
+  return {
+    ratings: { ...ratings.value },
+    favorites: { ...favorites.value },
+    categories_all: [...categoriesAll.value],
+    category: Object.fromEntries(
+      Object.entries(category.value).map(([k, v]) => [k, [...v]])
+    ),
+  };
+}
+
+function applyPayload(payload) {
+  ratings.value = payload.ratings || {};
+  favorites.value = payload.favorites || {};
+  categoriesAll.value = normalizeCategoriesAll(payload.categories_all);
+  category.value = normalizeCategoryMap(payload.category);
 }
 
 function persistLocal() {
@@ -59,33 +107,30 @@ function persistLocal() {
   pendingSync.value = true;
 }
 
-/**
- * 收藏页 / 已收藏筛选：
- * 评分不为 0，或 favorites[id] === true
- */
+function queueSync(quiet = false) {
+  if (!hasToken()) {
+    if (!quiet) syncHint.value = '已保存在本机；配置 Token 后可同步';
+    return;
+  }
+  if (!quiet) syncHint.value = '将自动同步…';
+  scheduleSync();
+}
+
 export function useUserData() {
   async function init() {
     const remote = await loadUserData();
     if (isDirty()) {
-      const local = readLocal();
-      ratings.value = local.ratings;
-      favorites.value = local.favorites;
+      applyPayload(readLocal());
       pendingSync.value = true;
-      syncHint.value = hasToken()
-        ? '有未同步的本地改动，将自动写回仓库'
-        : '已保存在本机；填写 Token 后可同步到仓库';
+      syncHint.value = hasToken() ? '有未同步的本地改动' : '';
     } else {
-      ratings.value = remote.ratings;
-      favorites.value = remote.favorites;
+      applyPayload(remote);
       writeLocal(snapshot());
       pendingSync.value = false;
       syncHint.value = '';
     }
     loaded.value = true;
-
-    if (isDirty() && hasToken()) {
-      scheduleSync();
-    }
+    if (isDirty() && hasToken()) scheduleSync();
   }
 
   function getRating(issueNumber) {
@@ -98,6 +143,14 @@ export function useUserData() {
     return getRating(id) !== 0 || favorites.value[id] === true;
   }
 
+  function getCategories(issueNumber) {
+    return category.value[String(issueNumber)] || [];
+  }
+
+  function hasCategory(issueNumber, name) {
+    return getCategories(issueNumber).includes(name);
+  }
+
   async function setRating(issueNumber, stars) {
     const id = String(issueNumber);
     const nextRatings = { ...ratings.value };
@@ -105,12 +158,7 @@ export function useUserData() {
     else nextRatings[id] = Math.min(5, Math.max(0, Number(stars) || 0));
     ratings.value = nextRatings;
     persistLocal();
-    if (!hasToken()) {
-      syncHint.value = '已保存在本机；到「设置」填写 Token 可同步到仓库';
-      return;
-    }
-    syncHint.value = '将在片刻后同步到仓库…';
-    scheduleSync();
+    queueSync();
   }
 
   async function setFavorite(issueNumber, value) {
@@ -120,19 +168,46 @@ export function useUserData() {
     if (value) {
       nextFav[id] = true;
     } else {
-      // 取消收藏：去掉 favorite，并清零评分，否则评分≠0 仍会出现在收藏页
       delete nextFav[id];
       delete nextRatings[id];
       ratings.value = nextRatings;
     }
     favorites.value = nextFav;
     persistLocal();
-    if (!hasToken()) {
-      syncHint.value = '已保存在本机；到「设置」填写 Token 可同步到仓库';
-      return;
+    queueSync();
+  }
+
+  function setCategoriesAll(list) {
+    categoriesAll.value = normalizeCategoriesAll(list);
+    // 清理已删除类别在各 issue 上的引用
+    const allow = new Set(categoriesAll.value);
+    const nextMap = {};
+    for (const [id, arr] of Object.entries(category.value)) {
+      const kept = arr.filter((n) => allow.has(n));
+      if (kept.length) nextMap[id] = kept;
     }
-    syncHint.value = '将在片刻后同步到仓库…';
-    scheduleSync();
+    category.value = nextMap;
+    persistLocal();
+    queueSync();
+  }
+
+  function toggleCategory(issueNumber, name) {
+    const id = String(issueNumber);
+    const cat = String(name || '').trim();
+    if (!cat || !categoriesAll.value.includes(cat)) return;
+
+    const prev = getCategories(id);
+    const next = prev.includes(cat)
+      ? prev.filter((n) => n !== cat)
+      : [...prev, cat];
+
+    const map = { ...category.value };
+    if (next.length) map[id] = next;
+    else delete map[id];
+    category.value = map;
+    persistLocal();
+    // 类别点选频繁：安静排队同步
+    queueSync(true);
   }
 
   function scheduleSync() {
@@ -168,18 +243,20 @@ export function useUserData() {
             mergeRemote: (remote) => ({
               ratings: { ...(remote.ratings || {}), ...payload.ratings },
               favorites: { ...(remote.favorites || {}), ...payload.favorites },
+              // 类别以本地快照为准（含顺序与删除）
+              categories_all: payload.categories_all,
+              category: payload.category,
             }),
           }
         );
-        ratings.value = written.ratings || {};
-        favorites.value = written.favorites || {};
+        applyPayload(written);
         writeLocal(written);
         clearDirty();
         pendingSync.value = false;
-        syncHint.value = '已同步到仓库';
+        syncHint.value = '已同步';
         setTimeout(() => {
-          if (syncHint.value === '已同步到仓库') syncHint.value = '';
-        }, 2500);
+          if (syncHint.value === '已同步') syncHint.value = '';
+        }, 2000);
       } catch (err) {
         syncError.value = err.message || String(err);
         syncHint.value = '';
@@ -207,6 +284,8 @@ export function useUserData() {
   return {
     ratings,
     favorites,
+    categoriesAll,
+    category,
     favoriteIds,
     syncing,
     syncError,
@@ -216,8 +295,12 @@ export function useUserData() {
     init,
     getRating,
     isFavorite,
+    getCategories,
+    hasCategory,
     setRating,
     setFavorite,
+    setCategoriesAll,
+    toggleCategory,
     syncToRepo,
     hasToken,
   };

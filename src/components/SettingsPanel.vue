@@ -1,56 +1,80 @@
 <template>
   <div class="settings-panel">
-    <h2>设置</h2>
-    <p class="hint">配置后可将评分、收藏同步到本仓库。</p>
+    <header class="settings-hero">
+      <h2>设置</h2>
+      <p>Token 用于同步评分、收藏与分类；分类列表在此维护，详情页点选打标。</p>
+      <div class="token-status" :class="tokenDetected ? 'ok' : 'miss'">
+        {{ tokenDetected ? 'Token 已就绪' : '尚未配置 Token' }}
+      </div>
+    </header>
 
-    <div class="token-status" :class="tokenDetected ? 'ok' : 'miss'">
-      {{ tokenDetected ? '已配置 Token' : '未配置 Token' }}
-    </div>
+    <section class="card">
+      <h3>同步</h3>
+      <label class="field">
+        <span>GitHub Token</span>
+        <div class="token-row">
+          <input
+            v-model="form.githubToken"
+            :type="showToken ? 'text' : 'password'"
+            placeholder="Personal Access Token"
+            autocomplete="off"
+          />
+          <button type="button" class="ghost" @click="showToken = !showToken">
+            {{ showToken ? '隐藏' : '显示' }}
+          </button>
+        </div>
+      </label>
 
-    <label class="field">
-      <span>GitHub Token</span>
-      <div class="token-row">
-        <input
-          v-model="form.githubToken"
-          :type="showToken ? 'text' : 'password'"
-          placeholder="Personal Access Token"
-          autocomplete="off"
-        />
-        <button type="button" class="ghost" @click="showToken = !showToken">
-          {{ showToken ? '隐藏' : '显示' }}
+      <div class="field-grid">
+        <label class="field">
+          <span>Owner</span>
+          <input v-model="form.repoOwner" type="text" />
+        </label>
+        <label class="field">
+          <span>Repo</span>
+          <input v-model="form.repoName" type="text" />
+        </label>
+        <label class="field">
+          <span>Branch</span>
+          <input v-model="form.branch" type="text" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="primary" @click="save">保存设置</button>
+        <button type="button" class="ghost" @click="clear">清除 Token</button>
+        <button type="button" class="ghost" :disabled="syncing || !tokenDetected" @click="sync">
+          {{ syncing ? '同步中…' : '立即同步' }}
         </button>
       </div>
-    </label>
+    </section>
 
-    <label class="field">
-      <span>仓库 Owner</span>
-      <input v-model="form.repoOwner" type="text" />
-    </label>
-
-    <label class="field">
-      <span>仓库 Name</span>
-      <input v-model="form.repoName" type="text" />
-    </label>
-
-    <label class="field">
-      <span>分支</span>
-      <input v-model="form.branch" type="text" />
-    </label>
-
-    <div class="actions">
-      <button type="button" class="primary" @click="save">保存</button>
-      <button type="button" class="ghost" @click="clear">清除 Token</button>
-      <button type="button" class="ghost" :disabled="syncing || !tokenDetected" @click="sync">
-        {{ syncing ? '同步中…' : '同步' }}
-      </button>
-    </div>
+    <section class="card">
+      <h3>分类字典</h3>
+      <p class="section-hint">一行一个，顺序即展示顺序。保存后写入本地并自动同步。</p>
+      <textarea
+        v-model="categoriesText"
+        class="category-textarea"
+        rows="8"
+        placeholder="AI&#10;Web&#10;工具&#10;开源"
+        spellcheck="false"
+        @focus="categoriesEditing = true"
+        @blur="categoriesEditing = false"
+      />
+      <div class="actions">
+        <button type="button" class="primary" @click="saveCategories">保存分类</button>
+      </div>
+      <div v-if="previewTags.length" class="preview-tags">
+        <span v-for="tag in previewTags" :key="tag" class="preview-tag">{{ tag }}</span>
+      </div>
+    </section>
 
     <p v-if="status" class="status" :class="statusType">{{ status }}</p>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, computed, onMounted, watch } from 'vue';
 import {
   loadSettings,
   saveSettings,
@@ -71,11 +95,30 @@ const status = ref('');
 const statusType = ref('ok');
 const syncing = ref(false);
 const tokenDetected = ref(false);
+const categoriesText = ref('');
+const categoriesEditing = ref(false);
 const user = useUserData();
+
+const previewTags = computed(() =>
+  categoriesText.value
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+);
 
 function refreshTokenStatus() {
   tokenDetected.value = hasToken();
 }
+
+watch(
+  () => user.categoriesAll.value,
+  (list) => {
+    if (!categoriesEditing.value) {
+      categoriesText.value = (list || []).join('\n');
+    }
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   Object.assign(form, loadSettings());
@@ -86,7 +129,7 @@ function save() {
   saveSettings({ ...form });
   refreshTokenStatus();
   statusType.value = 'ok';
-  status.value = '已保存';
+  status.value = '设置已保存';
 }
 
 function clear() {
@@ -95,6 +138,13 @@ function clear() {
   refreshTokenStatus();
   statusType.value = 'ok';
   status.value = 'Token 已清除';
+}
+
+function saveCategories() {
+  user.setCategoriesAll(previewTags.value);
+  categoriesText.value = previewTags.value.join('\n');
+  statusType.value = 'ok';
+  status.value = '分类已更新（本地优先，页面会自动同步）';
 }
 
 async function sync() {
@@ -122,30 +172,36 @@ async function sync() {
 
 <style scoped>
 .settings-panel {
-  max-width: 520px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  padding: 1.25rem 1.25rem 3rem;
   overflow-y: auto;
   height: 100%;
+  box-sizing: border-box;
 }
 
-h2 {
-  margin: 0 0 0.5rem;
+.settings-hero {
+  margin-bottom: 1.25rem;
+}
+
+.settings-hero h2 {
+  margin: 0 0 0.35rem;
   color: var(--primary-color);
+  font-size: 1.4rem;
 }
 
-.hint {
+.settings-hero p {
+  margin: 0 0 0.75rem;
   color: #666;
   font-size: 0.9rem;
   line-height: 1.5;
-  margin-bottom: 1rem;
 }
 
 .token-status {
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  margin-bottom: 1.25rem;
+  display: inline-flex;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
 }
 
 .token-status.ok {
@@ -158,25 +214,64 @@ h2 {
   color: #ef6c00;
 }
 
+.card {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 1.1rem 1.15rem 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.card h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #333;
+}
+
+.section-hint {
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: #888;
+  line-height: 1.45;
+}
+
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
   font-size: 0.875rem;
   color: #444;
 }
 
-.field input {
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 0.95rem;
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
 }
 
-.field input:focus {
+.field input,
+.category-textarea {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: #fff;
+  font-family: inherit;
+}
+
+.category-textarea {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.field input:focus,
+.category-textarea:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: var(--primary-color, #2196f3);
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.12);
 }
 
@@ -192,24 +287,24 @@ h2 {
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
 }
 
 button.primary {
-  background: var(--primary-color);
+  background: var(--primary-color, #2196f3);
   color: #fff;
   border: none;
-  border-radius: 4px;
-  padding: 0.55rem 1.1rem;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
   cursor: pointer;
 }
 
 button.ghost {
   background: #fff;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
   cursor: pointer;
   color: #555;
 }
@@ -219,8 +314,23 @@ button.ghost:disabled {
   cursor: not-allowed;
 }
 
+.preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+
+.preview-tag {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
 .status {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   font-size: 0.875rem;
 }
 
@@ -230,5 +340,11 @@ button.ghost:disabled {
 
 .status.err {
   color: #c62828;
+}
+
+@media (max-width: 640px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

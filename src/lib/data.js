@@ -22,15 +22,21 @@ export async function loadIssues() {
   return { manifest, issues };
 }
 
-/** @returns {{ ratings: Record<string, number>, favorites: Record<string, boolean> }} */
 export async function loadUserData() {
   try {
     const data = await fetchJson('data/user.json');
     return {
       ratings: data.ratings && typeof data.ratings === 'object' ? data.ratings : {},
       favorites: data.favorites && typeof data.favorites === 'object' ? data.favorites : {},
+      categories_all: Array.isArray(data.categories_all) ? data.categories_all : [],
+      category: data.category && typeof data.category === 'object' ? data.category : {},
     };
   } catch {
-    return { ratings: {}, favorites: {} };
+    return {
+      ratings: {},
+      favorites: {},
+      categories_all: [],
+      category: {},
+    };
   }
 }

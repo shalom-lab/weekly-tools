@@ -239,7 +239,16 @@ async function ensureUserDataFiles() {
   } catch {
     await fs.writeFile(
       file,
-      `${JSON.stringify({ ratings: {}, favorites: {} }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          ratings: {},
+          favorites: {},
+          categories_all: [],
+          category: {},
+        },
+        null,
+        2
+      )}\n`,
       'utf8'
     );
     console.log('初始化 user.json');

@@ -7,5 +7,12 @@
   "favorites": {
     "10742": true,
     "10744": true
-  }
+  },
+  "categories_all": [
+    "AI",
+    "Web",
+    "工具",
+    "开源"
+  ],
+  "category": {}
 }

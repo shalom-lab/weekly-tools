@@ -205,6 +205,30 @@
               @update:model-value="onRate"
             />
           </div>
+          <div
+            v-if="user.categoriesAll.value.length"
+            class="detail-categories"
+            role="group"
+            aria-label="分类"
+          >
+            <button
+              v-for="cat in user.categoriesAll.value"
+              :key="cat"
+              type="button"
+              class="cat-chip"
+              :class="{ on: user.hasCategory(selectedIssue.issueNumber, cat) }"
+              :disabled="user.syncing.value"
+              @click="onToggleCategory(cat)"
+            >
+              {{ cat }}
+            </button>
+          </div>
+          <div
+            v-else
+            class="detail-categories empty"
+          >
+            在设置中添加分类后，可在此点选打标
+          </div>
         </div>
         <div class="detail-content markdown-body" v-html="renderedBody"></div>
       </div>
@@ -474,6 +498,11 @@ async function onFavorite(value) {
   } catch {
     /* syncError already set */
   }
+}
+
+function onToggleCategory(cat) {
+  if (!selectedIssue.value) return;
+  user.toggleCategory(selectedIssue.value.issueNumber, cat);
 }
 
 function formatDate(datetime) {
@@ -1018,6 +1047,48 @@ body {
   display: inline-block;
   min-width: 3em;
   text-align: left;
+}
+
+.detail-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+  min-height: 28px;
+  align-items: center;
+}
+
+.detail-categories.empty {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.cat-chip {
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: #666;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+
+.cat-chip:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.cat-chip.on {
+  background: #e3f2fd;
+  border-color: #90caf9;
+  color: #1565c0;
+}
+
+.cat-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .empty-state {
