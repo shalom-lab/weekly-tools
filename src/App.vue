@@ -40,14 +40,6 @@
         >
           {{ user.syncing.value ? '同步中…' : '同步到远程' }}
         </button>
-        <div v-if="!showSettings" class="search-bar">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="搜索标题或内容..."
-            class="search-input"
-          />
-        </div>
         <button
           type="button"
           class="icon-btn"
@@ -85,41 +77,52 @@
 
     <div v-else class="main-content">
       <div class="issue-list">
-        <div class="list-filters">
-          <div class="filter-group" role="group" aria-label="时间">
-            <button
-              v-for="opt in timeFilters"
-              :key="opt.id"
-              type="button"
-              class="filter-chip"
-              :class="{ active: timeFilter === opt.id }"
-              @click="toggleTimeFilter(opt.id)"
-            >
-              {{ opt.label }}
-            </button>
+        <div class="list-toolbar">
+          <div class="list-filters">
+            <div class="filter-group" role="group" aria-label="时间">
+              <button
+                v-for="opt in timeFilters"
+                :key="opt.id"
+                type="button"
+                class="filter-chip"
+                :class="{ active: timeFilter === opt.id }"
+                @click="toggleTimeFilter(opt.id)"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+            <div class="filter-group" role="group" aria-label="收藏">
+              <button
+                type="button"
+                class="filter-chip"
+                :class="{ active: favOnly }"
+                @click="toggleFavFilter"
+              >
+                已收藏
+              </button>
+            </div>
+            <div class="filter-group star-filter" role="group" :aria-label="starFilterLabel">
+              <button
+                v-for="n in 5"
+                :key="n"
+                type="button"
+                class="star-filter-btn"
+                :class="{ on: n <= minStars }"
+                :title="`${n} 星及以上`"
+                @click="toggleMinStars(n)"
+              >
+                ★
+              </button>
+            </div>
           </div>
-          <div class="filter-group" role="group" aria-label="收藏">
-            <button
-              type="button"
-              class="filter-chip"
-              :class="{ active: favOnly }"
-              @click="toggleFavFilter"
-            >
-              已收藏
-            </button>
-          </div>
-          <div class="filter-group star-filter" role="group" :aria-label="starFilterLabel">
-            <button
-              v-for="n in 5"
-              :key="n"
-              type="button"
-              class="star-filter-btn"
-              :class="{ on: n <= minStars }"
-              :title="`${n} 星及以上`"
-              @click="toggleMinStars(n)"
-            >
-              ★
-            </button>
+          <div class="list-search">
+            <input
+              v-model="searchQuery"
+              type="search"
+              placeholder="搜索标题或内容..."
+              class="search-input"
+              aria-label="搜索"
+            />
           </div>
         </div>
 
@@ -283,7 +286,7 @@ let listResizeObserver = null;
 function calculatePageSize() {
   const contentEl = document.querySelector('.list-content');
   const listEl = document.querySelector('.issue-list');
-  const filtersEl = document.querySelector('.list-filters');
+  const filtersEl = document.querySelector('.list-toolbar');
   const paginationEl = document.querySelector('.pagination');
 
   let available = contentEl?.clientHeight || 0;
@@ -736,12 +739,6 @@ body {
   color: #666;
 }
 
-.search-bar {
-  width: 280px;
-  max-width: 36vw;
-  min-width: 160px;
-}
-
 .search-input {
   width: 100%;
   height: 36px;
@@ -838,13 +835,23 @@ body {
   overflow: hidden;
 }
 
+.list-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0 0 0.75rem;
+  flex-shrink: 0;
+}
+
 .list-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 0.75rem;
-  padding: 0 0 0.75rem;
-  flex-shrink: 0;
+}
+
+.list-search {
+  width: 100%;
 }
 
 .filter-group {
@@ -1249,12 +1256,6 @@ body {
   .status-box {
     min-width: 0;
     flex: 1 1 12rem;
-  }
-
-  .search-bar {
-    width: auto;
-    max-width: none;
-    flex: 1;
   }
 
   .main-content {
