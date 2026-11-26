@@ -4,14 +4,15 @@
     "2019.json",
     "2020.json",
     "2021.json",
+    "2022.json",
     "2023.json",
     "2024.json",
     "2025.json",
     "2026.json"
   ],
-  "count": 6274,
-  "withHtml": 6272,
+  "count": 6315,
+  "withHtml": 6313,
   "hasHtml": true,
-  "updatedAt": "2026-11-25T01:47:56.597Z",
+  "updatedAt": "2026-11-26T01:21:33.453Z",
   "maxChunkBytes": 41943040
 }
